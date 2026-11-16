@@ -1,0 +1,153 @@
+import { useRef } from 'react'
+import type { ReactNode } from 'react'
+
+function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full flex-col bg-sidebar text-white">
+      <a
+        href="#workspace"
+        onClick={onNavigate}
+        className="flex items-center gap-3 px-6 py-7"
+      >
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand font-bold">
+          OI
+        </span>
+
+        <span>
+          <span className="block text-base font-semibold tracking-tight">
+            OpsIntelligence
+          </span>
+          <span className="text-xs text-slate-400">
+            Operations command centre
+          </span>
+        </span>
+      </a>
+
+      <nav aria-label="Main navigation" className="px-4 py-6">
+        <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+          Workspace
+        </p>
+
+        <a
+          href="#workspace"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-lg bg-sidebar-hover px-3 py-3 text-sm font-medium hover:bg-slate-700"
+        >
+          <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
+          Overview
+        </a>
+
+        <a
+          href="#connection"
+          onClick={onNavigate}
+          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+        >
+          <span
+            aria-hidden="true"
+            className="size-2 rounded-full border border-slate-400"
+          />
+          API connection
+        </a>
+      </nav>
+
+      <div className="mx-4 mt-auto mb-5 rounded-xl border border-white/10 p-4">
+        <p className="text-sm font-medium">Local workspace</p>
+        <p className="mt-2 text-xs leading-relaxed text-slate-400">
+          Your application runs locally. Operational capabilities will arrive in
+          later phases.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const navigation = useRef<HTMLDialogElement>(null)
+
+  function closeNavigation() {
+    navigation.current?.close()
+  }
+
+  return (
+    <div className="min-h-screen bg-canvas">
+      <a
+        href="#main-content"
+        className="sr-only fixed top-3 left-3 z-50 rounded-lg bg-surface px-4 py-3 text-ink shadow-panel focus:not-sr-only"
+      >
+        Skip to content
+      </a>
+
+      <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
+        <Sidebar />
+      </aside>
+
+      <dialog
+        ref={navigation}
+        aria-label="Main navigation"
+        className="fixed inset-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] border-0 bg-sidebar p-0 text-white backdrop:bg-slate-950/50"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            const bounds = event.currentTarget.getBoundingClientRect()
+
+            if (
+              event.clientX < bounds.left ||
+              event.clientX > bounds.right ||
+              event.clientY < bounds.top ||
+              event.clientY > bounds.bottom
+            ) {
+              closeNavigation()
+            }
+          }
+        }}
+      >
+        <div className="flex justify-end px-4 pt-4">
+          <button
+            type="button"
+            onClick={closeNavigation}
+            className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover"
+          >
+            Close menu
+          </button>
+        </div>
+
+        <div className="h-[calc(100%-4rem)]">
+          <Sidebar onNavigate={closeNavigation} />
+        </div>
+      </dialog>
+
+      <div className="min-w-0 lg:pl-64">
+        <header className="sticky top-0 z-20 border-b border-line bg-surface">
+          <div className="flex h-18 items-center justify-between gap-4 px-5 sm:px-8">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => navigation.current?.showModal()}
+                className="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-canvas lg:hidden"
+                aria-haspopup="dialog"
+              >
+                Menu
+              </button>
+
+              <div>
+                <p className="text-xs text-muted">Workspace</p>
+                <p className="text-sm font-semibold">Overview</p>
+              </div>
+            </div>
+
+            <span className="rounded-full border border-line px-3 py-1 text-xs font-medium text-muted">
+              Local environment
+            </span>
+          </div>
+        </header>
+
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10"
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}

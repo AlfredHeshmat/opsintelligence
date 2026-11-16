@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --color-canvas: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-sidebar: #101d30;
+  --color-sidebar-hover: #1b2c43;
+
+  --color-ink: #172b43;
+  --color-muted: #52647a;
+  --color-line: #dce3ec;
+
+  --color-brand: #087f75;
+  --color-brand-hover: #06685f;
+  --color-brand-soft: #e8f5f2;
+
+  --color-success: #167347;
+  --color-warning: #925b08;
+  --color-danger: #b42332;
+
+  --shadow-panel: 0 2px 8px rgb(16 29 48 / 4%);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button:not(:disabled),
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 4px;
+  }
+
+  ::selection {
+    background: #ccebe5;
+    color: #101d30;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
