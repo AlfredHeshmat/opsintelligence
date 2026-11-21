@@ -851,3 +851,7 @@ security limits. No API keys or confidential company data are accepted in this p
 ## Phase 4B.1 — Local organisation security prototype
 
 New authenticated organisations, member roles and tenant-scoped project metadata are available at `#enterprise-workspace`. Read [Phase 4B.1 identity setup and limitations](docs/phase4b1-identity.md) before using the feature. The original warehouse and industry demonstration endpoints remain shared and synthetic; **do not upload confidential company data or real API/MCP keys**.
+
+### Phase 4B.3 — Connector governance update
+
+See [`docs/phase4b3-connector-governance.md`](docs/phase4b3-connector-governance.md) for additive migration `0005`, audited connector metadata review, role restrictions, sidebar navigation and smoke-test commands. **Live database and cloud connections, real credential storage and enterprise data ingestion are not enabled.**
