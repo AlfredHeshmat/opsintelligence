@@ -59,7 +59,10 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: postgresql+psycopg://ci:ci_password_only@127.0.0.1:5432/ops_ci
-        run: python -m alembic upgrade head
+        run: |
+          python -m alembic upgrade head
+          python -m alembic downgrade -1
+          python -m alembic upgrade head
   docker-smoke:
     runs-on: ubuntu-latest
     env:

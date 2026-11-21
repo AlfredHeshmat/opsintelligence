@@ -15,6 +15,8 @@ class ConnectorRequest(BaseModel):
     display_name: str = Field(min_length=2,max_length=120,pattern=r'^[^\x00-\x1f]+$')
     kind: ConnectorKind
     provider: Provider
+    purpose: str = Field(default='Demonstration connector metadata', min_length=10, max_length=300, pattern=r'^[^\x00-\x1f]+$')
+    data_classification: Literal['public', 'internal', 'confidential', 'restricted'] = 'internal'
 
 
 def validate_pair(kind: str, provider: str) -> bool:

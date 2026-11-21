@@ -14,3 +14,7 @@ class ConnectorRegistration(Base):
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default='not_configured')
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(300), nullable=False, default='Existing demonstration connector')
+    data_classification: Mapped[str] = mapped_column(String(20), nullable=False, default='internal')
+    reviewed_by: Mapped[int | None] = mapped_column(ForeignKey('identity_users.id', ondelete='SET NULL'))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

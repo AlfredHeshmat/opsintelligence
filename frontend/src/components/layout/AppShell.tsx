@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+function Sidebar({ onNavigate, activeSection }: { onNavigate?: () => void; activeSection: string }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-white">
       <a
@@ -31,30 +31,30 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <a
           href="#workspace"
           onClick={onNavigate}
-          className="flex items-center gap-3 rounded-lg bg-sidebar-hover px-3 py-3 text-sm font-medium hover:bg-slate-700"
+          className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-700 ${activeSection === 'workspace' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}
         >
           <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
           Overview
         </a>
 
-        <a href="#enterprise-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Organisation security</a>
-        <a href="#decision-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry & scenarios</a>
-        <a href="#connections" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Data connections</a>
+        <a href="#enterprise-workspace" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'enterprise-workspace' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Organisation security</a>
+        <a href="#decision-workspace" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'decision-workspace' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry & scenarios</a>
+        <a href="#connections" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'connections' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Data connections</a>
         <a
           href="#optimization"
           onClick={onNavigate}
-          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+          className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'optimization' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}
         >
           <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
           Optimisation
         </a>
-        <a href="#intelligence" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Business intelligence</a>
-        <a href="#predictions" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Delay predictions</a>
-        <a href="#simulation" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> What-if simulator</a>
+        <a href="#intelligence" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'intelligence' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Business intelligence</a>
+        <a href="#predictions" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'predictions' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Delay predictions</a>
+        <a href="#simulation" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'simulation' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> What-if simulator</a>
         <a
           href="#orders"
           onClick={onNavigate}
-          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+          className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'orders' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}
         >
           <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
           Orders
@@ -62,7 +62,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <a
           href="#connection"
           onClick={onNavigate}
-          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+          className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'connection' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}
         >
           <span
             aria-hidden="true"
@@ -85,9 +85,10 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigation = useRef<HTMLDialogElement>(null)
   const [section,setSection] = useState('Overview')
+  const [activeSection,setActiveSection] = useState(window.location.hash.slice(1) || 'workspace')
   useEffect(()=>{
     const names:Record<string,string>={'workspace':'Overview','enterprise-workspace':'Organisation security','decision-workspace':'Industry & scenarios','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
-    const update=()=>setSection(names[window.location.hash.slice(1)]||'Overview')
+    const update=()=>{const hash=window.location.hash.slice(1)||'workspace';setActiveSection(hash);setSection(names[hash]||'Overview')}
     window.addEventListener('hashchange',update);update()
     return ()=>window.removeEventListener('hashchange',update)
   },[])
@@ -106,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
 
       <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
-        <Sidebar />
+        <Sidebar activeSection={activeSection} />
       </aside>
 
       <dialog
@@ -139,7 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <div className="h-[calc(100%-4rem)]">
-          <Sidebar onNavigate={closeNavigation} />
+          <Sidebar onNavigate={closeNavigation} activeSection={activeSection} />
         </div>
       </dialog>
 
