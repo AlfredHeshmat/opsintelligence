@@ -1,3 +1,13 @@
+## Phase 4B.2: Containers, CI and connector registry
+
+The **local-only full stack** is now defined in `compose.full.yaml` (PostgreSQL, migrations, FastAPI, React/Nginx):
+
+```powershell
+docker compose -f compose.full.yaml up -d --build
+```
+
+Browse `http://127.0.0.1:8080`. Keep your existing root `.env` file. The original `compose.yaml` remains database-only. The authenticated organisation workspace includes a **metadata-only** connector catalogue, with no credential entry or live connections. Read [Phase 4B.2 deployment and security notes](docs/phase4b2-deployment-connectors.md) before running this stack, especially if you already have PostgreSQL volumes or an existing `.env`.
+
 # OpsIntelligence
 
 OpsIntelligence is an operations command centre for a fictional logistics and supply-chain company.
@@ -823,3 +833,21 @@ Only Phase 1 is currently in scope.
 Before marking Phase 1 complete, the remaining review includes checking strict TypeScript configuration, exercising mobile and keyboard navigation, completing the architecture and development-plan documents, and confirming the final repository contents.
 
 The current implementation is a working local foundation. It should not yet be described as a production deployment or a finished operations platform.
+## Phase 4 — Industry & Scenario Studio
+
+The Dashboard includes **Industry & scenarios** and **Data connections** sections. The new local APIs support industry/KPI discovery, scenario configuration validation, and bounded CSV schema preview. Industry detection is tentative and requires human confirmation. **Only warehouse logistics has a real solver.** For API-key, database and MCP integrations, the UI deliberately shows security prerequisites instead of accepting credentials in an unauthenticated demo. Read `docs/phase4-decision-workspace.md` before attempting company data connections.
+
+## Phase 4A: Industry contracts and registry (new)
+
+The decision workspace now reads a versioned industry registry and displays detailed
+Technology, Agriculture/AgriTech, and Logistics data contracts. Additional industry
+families are explicitly marked catalogue-only; they do not have executable solvers.
+The shared `/api/v1/workspace/decision/validate` contract checks sub-industry,
+objective, metric units, and duplicate constraints without executing optimisation.
+See [`docs/phase4a-industry-registry.md`](docs/phase4a-industry-registry.md) for API
+examples, acceptance criteria, AgriTech capstone integration prerequisites and
+security limits. No API keys or confidential company data are accepted in this phase.
+
+## Phase 4B.1 — Local organisation security prototype
+
+New authenticated organisations, member roles and tenant-scoped project metadata are available at `#enterprise-workspace`. Read [Phase 4B.1 identity setup and limitations](docs/phase4b1-identity.md) before using the feature. The original warehouse and industry demonstration endpoints remain shared and synthetic; **do not upload confidential company data or real API/MCP keys**.

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -37,6 +37,28 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           Overview
         </a>
 
+        <a href="#enterprise-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Organisation security</a>
+        <a href="#decision-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry & scenarios</a>
+        <a href="#connections" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Data connections</a>
+        <a
+          href="#optimization"
+          onClick={onNavigate}
+          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+        >
+          <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
+          Optimisation
+        </a>
+        <a href="#intelligence" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Business intelligence</a>
+        <a href="#predictions" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Delay predictions</a>
+        <a href="#simulation" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> What-if simulator</a>
+        <a
+          href="#orders"
+          onClick={onNavigate}
+          className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"
+        >
+          <span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" />
+          Orders
+        </a>
         <a
           href="#connection"
           onClick={onNavigate}
@@ -53,8 +75,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="mx-4 mt-auto mb-5 rounded-xl border border-white/10 p-4">
         <p className="text-sm font-medium">Local workspace</p>
         <p className="mt-2 text-xs leading-relaxed text-slate-400">
-          Your application runs locally. Operational capabilities will arrive in
-          later phases.
+          Your application runs locally. Operational analytics and optimisation demo.
         </p>
       </div>
     </div>
@@ -63,6 +84,13 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigation = useRef<HTMLDialogElement>(null)
+  const [section,setSection] = useState('Overview')
+  useEffect(()=>{
+    const names:Record<string,string>={'workspace':'Overview','enterprise-workspace':'Organisation security','decision-workspace':'Industry & scenarios','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
+    const update=()=>setSection(names[window.location.hash.slice(1)]||'Overview')
+    window.addEventListener('hashchange',update);update()
+    return ()=>window.removeEventListener('hashchange',update)
+  },[])
 
   function closeNavigation() {
     navigation.current?.close()
@@ -130,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
               <div>
                 <p className="text-xs text-muted">Workspace</p>
-                <p className="text-sm font-semibold">Overview</p>
+                <p className="text-sm font-semibold">{section}</p>
               </div>
             </div>
 

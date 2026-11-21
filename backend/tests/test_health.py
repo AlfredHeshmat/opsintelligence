@@ -18,8 +18,9 @@ def client(monkeypatch):
     )
     get_settings.cache_clear()
 
-    app = create_app()
     engine = MagicMock()
+    monkeypatch.setattr("app.main.create_database_engine", lambda settings: engine)
+    app = create_app()
     app.dependency_overrides[get_engine] = lambda: engine
 
     try:

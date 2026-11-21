@@ -12,3 +12,7 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+.model_artifacts/
+
+# Local project transfer archives
+opsintelligence-*.zip
