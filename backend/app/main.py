@@ -6,6 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router
+from app.api.operations import router as operations_router
+from app.api.intelligence import router as intelligence_router
+from app.api.workspace import router as workspace_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import create_database_engine
@@ -36,9 +39,12 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET"],
+        allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
 
     app.include_router(router)
+    app.include_router(operations_router)
+    app.include_router(intelligence_router)
+    app.include_router(workspace_router)
     return app

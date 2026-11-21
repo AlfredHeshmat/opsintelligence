@@ -823,3 +823,6 @@ Only Phase 1 is currently in scope.
 Before marking Phase 1 complete, the remaining review includes checking strict TypeScript configuration, exercising mobile and keyboard navigation, completing the architecture and development-plan documents, and confirming the final repository contents.
 
 The current implementation is a working local foundation. It should not yet be described as a production deployment or a finished operations platform.
+## Phase 4 — Industry & Scenario Studio
+
+The Dashboard includes **Industry & scenarios** and **Data connections** sections. The new local APIs support industry/KPI discovery, scenario configuration validation, and bounded CSV schema preview. Industry detection is tentative and requires human confirmation. **Only warehouse logistics has a real solver.** For API-key, database and MCP integrations, the UI deliberately shows security prerequisites instead of accepting credentials in an unauthenticated demo. Read `docs/phase4-decision-workspace.md` before attempting company data connections.
