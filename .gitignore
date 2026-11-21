@@ -12,3 +12,4 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+.model_artifacts/
