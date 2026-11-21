@@ -1,3 +1,13 @@
+## Phase 4B.2: Containers, CI and connector registry
+
+The **local-only full stack** is now defined in `compose.full.yaml` (PostgreSQL, migrations, FastAPI, React/Nginx):
+
+```powershell
+docker compose -f compose.full.yaml up -d --build
+```
+
+Browse `http://127.0.0.1:8080`. Keep your existing root `.env` file. The original `compose.yaml` remains database-only. The authenticated organisation workspace includes a **metadata-only** connector catalogue, with no credential entry or live connections. Read [Phase 4B.2 deployment and security notes](docs/phase4b2-deployment-connectors.md) before running this stack, especially if you already have PostgreSQL volumes or an existing `.env`.
+
 # OpsIntelligence
 
 OpsIntelligence is an operations command centre for a fictional logistics and supply-chain company.
@@ -837,3 +847,7 @@ objective, metric units, and duplicate constraints without executing optimisatio
 See [`docs/phase4a-industry-registry.md`](docs/phase4a-industry-registry.md) for API
 examples, acceptance criteria, AgriTech capstone integration prerequisites and
 security limits. No API keys or confidential company data are accepted in this phase.
+
+## Phase 4B.1 — Local organisation security prototype
+
+New authenticated organisations, member roles and tenant-scoped project metadata are available at `#enterprise-workspace`. Read [Phase 4B.1 identity setup and limitations](docs/phase4b1-identity.md) before using the feature. The original warehouse and industry demonstration endpoints remain shared and synthetic; **do not upload confidential company data or real API/MCP keys**.

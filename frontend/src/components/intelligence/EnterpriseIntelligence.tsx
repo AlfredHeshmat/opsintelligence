@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const API = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+const API = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
 
 type Product = {sku:string;orders:number;units:number;revenue:number;pending_units:number;available_inventory:number;on_time_rate:number|null}
 type Performance = {synthetic:boolean;period_days:number;as_of_date?:string;products:Product[];totals:{orders:number;units:number;revenue:number;on_time_rate:number|null}}

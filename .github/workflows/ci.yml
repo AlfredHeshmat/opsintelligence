@@ -1,0 +1,83 @@
+name: OpsIntelligence checks
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Install backend
+        run: python -m pip install -e './backend[dev]'
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest -q
+      - name: Compile backend
+        run: python -m compileall -q backend/app backend/scripts
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci_password_only
+          POSTGRES_DB: ops_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d ops_ci" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e './backend[dev]'
+      - name: Upgrade migration chain
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://ci:ci_password_only@127.0.0.1:5432/ops_ci
+        run: python -m alembic upgrade head
+  docker-smoke:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: ops_ci
+      POSTGRES_PASSWORD: ephemeral_ci_only_password
+      POSTGRES_DB: ops_ci
+      OPS_FRONTEND_PORT: '8080'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and launch full stack
+        run: docker compose -f compose.full.yaml up -d --build --wait
+      - name: Verify backend through frontend reverse proxy
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/health
+          curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready
+      - name: Show diagnostics on failure
+        if: failure()
+        run: docker compose -f compose.full.yaml logs --tail=100
+      - name: Stop ephemeral test stack
+        if: always()
+        run: docker compose -f compose.full.yaml down

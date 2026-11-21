@@ -9,6 +9,8 @@ from app.api.health import router
 from app.api.operations import router as operations_router
 from app.api.intelligence import router as intelligence_router
 from app.api.workspace import router as workspace_router
+from app.api.enterprise import router as enterprise_router
+from app.api.connectors import router as connectors_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import create_database_engine
@@ -43,8 +45,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def protect_enterprise_responses(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith('/api/v1/enterprise'):
+            response.headers['Cache-Control'] = 'no-store'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
+
     app.include_router(router)
     app.include_router(operations_router)
     app.include_router(intelligence_router)
     app.include_router(workspace_router)
+    app.include_router(enterprise_router)
+    app.include_router(connectors_router)
     return app

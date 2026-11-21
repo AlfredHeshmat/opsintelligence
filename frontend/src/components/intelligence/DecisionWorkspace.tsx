@@ -6,7 +6,7 @@ type RegistryIndustry = {id:string;name:string;subindustries:string[];metrics:Me
 type ContractResult = {specification_valid:boolean;errors:string[];decision_status:string;solver_executable_for_this_spec:boolean;support_level:string;required_fields:string[]}
 type Preview={filename:string;rows:number;columns:string[];candidate_industry:string|null;confidence:string;warnings:string[];industry_confirmation_required:boolean;persisted:boolean}
 type Validation={industry:string;objective:string;applicable_kpis:string[];solver_available:boolean;decision_status:string;message:string;required_inputs:string[]}
-const API=(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/,'')
+const API=(import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/,'')
 async function call<T>(path:string,init?:RequestInit):Promise<T>{const response=await fetch(`${API}/api/v1/workspace${path}`,init);if(!response.ok){let message=`Request failed (${response.status})`;try{const body=await response.json() as {detail?:string|{msg:string}[]};if(typeof body.detail==='string')message=body.detail;else if(Array.isArray(body.detail))message=body.detail.map(x=>x.msg).join('; ')}catch{/* ignore */}throw new Error(message)}return response.json() as Promise<T>}
 const label=(id:string)=>id.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())
 

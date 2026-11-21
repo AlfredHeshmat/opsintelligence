@@ -37,6 +37,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           Overview
         </a>
 
+        <a href="#enterprise-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Organisation security</a>
         <a href="#decision-workspace" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry & scenarios</a>
         <a href="#connections" onClick={onNavigate} className="mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-300 hover:bg-sidebar-hover hover:text-white"><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Data connections</a>
         <a
@@ -85,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigation = useRef<HTMLDialogElement>(null)
   const [section,setSection] = useState('Overview')
   useEffect(()=>{
-    const names:Record<string,string>={'workspace':'Overview','decision-workspace':'Industry & scenarios','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
+    const names:Record<string,string>={'workspace':'Overview','enterprise-workspace':'Organisation security','decision-workspace':'Industry & scenarios','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
     const update=()=>setSection(names[window.location.hash.slice(1)]||'Overview')
     window.addEventListener('hashchange',update);update()
     return ()=>window.removeEventListener('hashchange',update)
