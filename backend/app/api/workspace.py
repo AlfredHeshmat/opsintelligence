@@ -12,6 +12,9 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
+from app.services.industry_registry import get_industry, registry_summary, REGISTRY_VERSION
+from app.services.decision_contracts import DecisionSpec, inspect_decision
+
 router = APIRouter(prefix="/api/v1/workspace", tags=["decision-workspace"])
 
 INDUSTRIES = {
@@ -34,32 +37,74 @@ SYNONYMS = {
     "finance": {"portfolio", "ticker", "asset", "nav", "exposure", "return"},
     "consulting": {"billable", "project", "timesheet", "consultant", "client", "engagement"},
     "manufacturing": {"machine", "production", "plant", "downtime", "bom", "throughput"},
+    "technology": {"cloud", "latency", "cpu", "instance", "saas", "subscription", "gpu", "workload", "region"},
+    "agriculture": {"ndvi", "wheat", "yield", "soil", "rainfall", "crop", "field", "irrigation", "fertilizer"},
 }
 
 @router.get("/industries")
 def industry_catalog():
-    return {"industries": [{"id": key, **value} for key, value in INDUSTRIES.items()],
-            "note": "Only the logistics warehouse solver is executable. Other industries provide schemas and planning guidance, not calculated optima."}
+    """Legacy frontend shape retained while using the versioned registry."""
+    summary = registry_summary()
+    return {"registry_version": REGISTRY_VERSION,
+            "industries": [{"id": item["id"], "name": item["name"],
+                            "metrics": [m["id"] for m in item["metrics"]],
+                            "objectives": item["objectives"],
+                            "status": "solver_available" if item["solver_available"] else "blueprint_only",
+                            "support_level": item["support_level"],
+                            "subindustries": item["subindustries"],
+                            "adapter_id": item["adapter_id"]}
+                           for item in summary["industries"]], "note": summary["disclaimer"]}
+
+
+@router.get("/registry")
+def decision_registry():
+    """Public metadata only: no credentials, organisation data, or live adapters."""
+    return registry_summary()
+
+
+@router.get("/registry/{industry_id}")
+def industry_definition(industry_id: str):
+    industry = get_industry(industry_id)
+    if industry is None:
+        raise HTTPException(status_code=404, detail="Unknown industry")
+    return {"registry_version": REGISTRY_VERSION, "industry": industry.to_dict()}
+
+
+@router.post("/decision/validate")
+def validate_decision(spec: DecisionSpec):
+    """Contract validation only, never an implicit call to the optimizer."""
+    return inspect_decision(spec)
+
+
+@router.get("/decision/solver-capabilities")
+def solver_capabilities():
+    return {"registry_version": REGISTRY_VERSION,
+            "adapters": [{"id": "warehouse_milp_v1", "industry": "logistics",
+                          "scope": "Synthetic warehouse order allocation only",
+                          "status": "demonstration", "verified_for_company_data": False}],
+            "auto_execute": False,
+            "requires_explicit_industry_selection": True,
+            "requires_validated_data_and_permissions": True}
 
 class ScenarioSpec(BaseModel):
     industry: str
-    objective: Literal["minimize_cost", "maximize_margin", "maximize_service", "minimize_risk"]
+    objective: str = Field(min_length=1, max_length=64)
     capex_reduction_percent: float = Field(default=7, ge=0, le=50)
     horizon_months: int = Field(default=12, ge=1, le=60)
     risk_appetite: Literal["conservative", "balanced", "aggressive"] = "balanced"
 
 @router.post("/scenario/validate")
 def validate_scenario(spec: ScenarioSpec):
-    template = INDUSTRIES.get(spec.industry)
+    template = get_industry(spec.industry)
     if template is None:
         raise HTTPException(status_code=422, detail="Unknown industry")
-    if spec.objective not in template["objectives"]:
+    if spec.objective not in template.objectives:
         raise HTTPException(status_code=422, detail="Objective not supported by this industry template")
     return {
         "industry": spec.industry, "objective": spec.objective,
         "parameters": spec.model_dump(exclude={"industry", "objective"}),
-        "applicable_kpis": template["metrics"],
-        "solver_available": template["status"] == "solver_available",
+        "applicable_kpis": [m.id for m in template.metrics],
+        "solver_available": template.support_level in ("solver_demo", "validated"),
         "decision_status": "configuration_validated_not_solved",
         "required_inputs": ["company financial records", "operational constraints", "time-aligned historical data", "data ownership and consent"],
         "message": "Scenario saved in the browser only. No company-specific optimum has been computed. Connect and validate data before solving."
