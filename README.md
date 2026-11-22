@@ -855,3 +855,8 @@ New authenticated organisations, member roles and tenant-scoped project metadata
 ### Phase 4B.3 — Connector governance update
 
 See [`docs/phase4b3-connector-governance.md`](docs/phase4b3-connector-governance.md) for additive migration `0005`, audited connector metadata review, role restrictions, sidebar navigation and smoke-test commands. **Live database and cloud connections, real credential storage and enterprise data ingestion are not enabled.**
+
+
+## Phase 4C: opt-in read-only PostgreSQL synthetic-data preview
+
+See [Phase 4C connector boundaries and operator setup](docs/phase4c-readonly-postgres.md). Off by default. Requires approved metadata, exact organisation/connector provisioning and a restricted synthetic database account. No arbitrary SQL, credentials in UI, or live enterprise integration claims.
