@@ -29,7 +29,7 @@ export function ConnectorRegistry({ token, organisationId, role, onAuditChange }
   },[root,token,organisationId])
   useEffect(()=>{
     let active=true
-    void refresh().catch(()=>{if(active)setMessage('Could not load connector metadata. Check your session and backend.')})
+    void Promise.resolve().then(()=>{if(active)return refresh()}).catch(()=>{if(active)setMessage('Could not load connector metadata. Check your session and backend.')})
     return()=>{active=false}
   },[refresh])
   async function mutate(path:string,method:'POST'|'DELETE', body?:unknown){
