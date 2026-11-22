@@ -1,0 +1,7 @@
+item_id,option_id,objective_value,handling_units,express_slots
+order_101,economy,12,3,0
+order_101,express,20,2,1
+order_102,economy,15,4,0
+order_102,express,22,2,1
+order_103,economy,17,4,0
+order_103,express,25,2,1

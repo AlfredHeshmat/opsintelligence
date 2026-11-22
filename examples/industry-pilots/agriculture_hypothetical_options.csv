@@ -1,0 +1,7 @@
+item_id,option_id,objective_value,water_ml,budget_aud
+field_north,wheat,700,6,500
+field_north,barley,510,3,350
+field_east,wheat,650,7,600
+field_east,barley,470,3,350
+field_west,wheat,600,6,540
+field_west,barley,400,2,300

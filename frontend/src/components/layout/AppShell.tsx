@@ -39,6 +39,7 @@ function Sidebar({ onNavigate, activeSection }: { onNavigate?: () => void; activ
 
         <a href="#enterprise-workspace" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'enterprise-workspace' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Organisation security</a>
         <a href="#decision-workspace" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'decision-workspace' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry & scenarios</a>
+        <a href="#industry-pilots" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'industry-pilots' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Industry solver lab</a>
         <a href="#connections" onClick={onNavigate} className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-3 text-sm hover:bg-sidebar-hover hover:text-white ${activeSection === 'connections' ? 'bg-sidebar-hover text-white font-semibold' : 'text-slate-300'}`}><span aria-hidden="true" className="size-2 rounded-sm bg-teal-300" /> Data connections</a>
         <a
           href="#optimization"
@@ -87,7 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [section,setSection] = useState('Overview')
   const [activeSection,setActiveSection] = useState(window.location.hash.slice(1) || 'workspace')
   useEffect(()=>{
-    const names:Record<string,string>={'workspace':'Overview','enterprise-workspace':'Organisation security','decision-workspace':'Industry & scenarios','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
+    const names:Record<string,string>={'workspace':'Overview','enterprise-workspace':'Organisation security','decision-workspace':'Industry & scenarios','industry-pilots':'Industry solver lab','connections':'Data connections','optimization':'Optimisation','intelligence':'Business intelligence','predictions':'Delay predictions','simulation':'What-if simulator','orders':'Orders','connection':'API connection'}
     const update=()=>{const hash=window.location.hash.slice(1)||'workspace';setActiveSection(hash);setSection(names[hash]||'Overview')}
     window.addEventListener('hashchange',update);update()
     return ()=>window.removeEventListener('hashchange',update)

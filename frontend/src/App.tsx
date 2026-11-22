@@ -3,6 +3,7 @@ import { AppShell } from './components/layout/AppShell'
 import { ApiStatus } from './components/layout/ApiStatus'
 import { EnterpriseIntelligence } from './components/intelligence/EnterpriseIntelligence'
 import { DecisionWorkspace } from './components/intelligence/DecisionWorkspace'
+import { IndustryPilotStudio } from './components/intelligence/IndustryPilotStudio'
 import { OrganisationWorkspace } from './components/intelligence/OrganisationWorkspace'
 
 type Overview = {synthetic: boolean; total_orders: number; pending_orders: number; delivered_orders: number; late_deliveries: number; on_time_rate: number | null; pending_units:number; daily_handling_capacity:number|null; inventory_units:number; trend: {date:string; orders:number; delayed:number}[]}
@@ -48,6 +49,7 @@ export default function App(){
    {run&&<div className="mt-6"><div className="grid gap-4 sm:grid-cols-4">{[{label:'Solver status',value:run.status},{label:'Model cost',value:money(run.objective_value)},{label:'Baseline cost',value:money(run.baseline_cost)},{label:'Estimated improvement',value:money(run.estimated_savings)}].map(k=><div className="rounded-xl bg-canvas p-4" key={k.label}><p className="text-xs text-muted">{k.label}</p><p className="mt-2 text-lg font-semibold">{k.value}</p></div>)}</div><p className="mt-3 text-xs text-muted">Run #{run.id} · {run.solver_message}</p><h3 className="mt-6 font-semibold">Order-level allocation decisions</h3><div className="mt-3 max-h-72 overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-muted"><th className="p-2">Order</th><th className="p-2">Decision</th><th className="p-2">Shipping</th><th className="p-2 text-right">Estimated cost</th></tr></thead><tbody>{run.decisions.slice(0,100).map(d=><tr key={d.order_id} className="border-b border-line/70"><td className="p-2">#{d.order_id}</td><td className="p-2 capitalize">{d.action}</td><td className="p-2">{d.shipping_option??'—'}</td><td className="p-2 text-right">{money(d.estimated_cost)}</td></tr>)}</tbody></table></div></div>}
    </section>
     <DecisionWorkspace />
+    <IndustryPilotStudio />
    <EnterpriseIntelligence runId={run?.id??null} refreshKey={refreshKey} />
    <section id="orders" className="mt-6 rounded-2xl border border-line bg-surface p-6 shadow-panel"><h2 className="text-lg font-semibold">Recent operational orders</h2><p className="mt-1 text-xs text-muted">Showing first 30 records · synthetic demonstration data</p><div className="mt-4 overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-muted"><th className="p-2">ID</th><th className="p-2">SKU</th><th className="p-2">Units</th><th className="p-2">Priority</th><th className="p-2">Status</th><th className="p-2">Promised</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} className="border-b border-line/70"><td className="p-2">#{o.id}</td><td className="p-2">{o.sku}</td><td className="p-2">{o.quantity}</td><td className="p-2">{o.priority}</td><td className="p-2 capitalize">{o.status}</td><td className="p-2">{o.promised_at.slice(0,10)}</td></tr>)}</tbody></table></div></section>
   </>}

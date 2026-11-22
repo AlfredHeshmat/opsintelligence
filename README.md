@@ -860,3 +860,8 @@ See [`docs/phase4b3-connector-governance.md`](docs/phase4b3-connector-governance
 ## Phase 4C: opt-in read-only PostgreSQL synthetic-data preview
 
 See [Phase 4C connector boundaries and operator setup](docs/phase4c-readonly-postgres.md). Off by default. Requires approved metadata, exact organisation/connector provisioning and a restricted synthetic database account. No arbitrary SQL, credentials in UI, or live enterprise integration claims.
+
+
+## Multi-industry mathematical pilot (Phase 4C.2)
+
+Three bounded, reproducible assignment MILPs for Logistics, Agriculture and Technology are available in **Industry solver lab**. All built-in values are **synthetic assumptions**, not sourced company measurements, and no live company uploads are authorised. See [model equations, reproducibility and dataset research](docs/phase4c2-industry-pilots.md) and the [example CSVs](examples/industry-pilots/). Existing warehouse optimisation remains unchanged.
