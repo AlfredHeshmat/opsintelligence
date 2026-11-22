@@ -106,3 +106,33 @@
  @media(max-width:700px){.workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
  @media(max-width:390px){.workflow-grid{grid-template-columns:1fr}}
 }
+
+/* Phase 4F: distinct enterprise destinations. Navigation remains a presentation
+   feature; every sensitive read/write must be authorised by FastAPI. */
+[data-access-mode="enterprise"] [data-signed-in="true"] .enterprise-overview-shortcuts,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-projects,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-data,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-analytics,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-orders,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-decisions,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-connectors,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-audit {display:none}
+[data-access-mode="enterprise"][data-active-page="enterprise-workspace"] [data-signed-in="true"] .enterprise-overview-shortcuts,
+[data-access-mode="enterprise"][data-active-page="enterprise-projects"] [data-signed-in="true"] #enterprise-projects,
+[data-access-mode="enterprise"][data-active-page="enterprise-data"] [data-signed-in="true"] #enterprise-data,
+[data-access-mode="enterprise"][data-active-page="enterprise-analytics"] [data-signed-in="true"] #enterprise-analytics,
+[data-access-mode="enterprise"][data-active-page="enterprise-orders"] [data-signed-in="true"] #enterprise-orders,
+[data-access-mode="enterprise"][data-active-page="enterprise-decisions"] [data-signed-in="true"] #enterprise-decisions,
+[data-access-mode="enterprise"][data-active-page="enterprise-connectors"] [data-signed-in="true"] #enterprise-connectors,
+[data-access-mode="enterprise"][data-active-page="enterprise-audit"] [data-signed-in="true"] #enterprise-audit {display:block}
+[data-access-mode="enterprise"][data-active-page="enterprise-projects"] [data-signed-in="true"] #enterprise-projects {display:grid}
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-projects,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-data,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-analytics,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-orders,
+[data-access-mode="enterprise"] [data-signed-in="true"] #enterprise-decisions {scroll-margin-top:6rem}
+/* Preserve horizontal scrolling within tables rather than overflowing the page. */
+[data-access-mode] .data-grid {width:100%}
+[data-access-mode] .data-grid th {position:sticky;top:0;z-index:1;background:#f5f8fb}
+[data-access-mode] .metric-number,[data-access-mode] .tabular-nums {font-variant-numeric:tabular-nums}
+@media(max-width:640px){[data-access-mode] h1{overflow-wrap:anywhere}[data-access-mode] .enterprise-panel{padding:1rem}}
