@@ -1,81 +1,76 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
-
-  --color-canvas: #f5f7fa;
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --color-canvas: #f3f6fa;
   --color-surface: #ffffff;
-  --color-sidebar: #101d30;
-  --color-sidebar-hover: #1b2c43;
-
-  --color-ink: #172b43;
-  --color-muted: #52647a;
-  --color-line: #dce3ec;
-
-  --color-brand: #087f75;
-  --color-brand-hover: #06685f;
-  --color-brand-soft: #e8f5f2;
-
+  --color-sidebar: #101c30;
+  --color-sidebar-hover: #223550;
+  --color-ink: #14263c;
+  --color-muted: #52657c;
+  --color-line: #dce5ee;
+  --color-brand: #087b72;
+  --color-brand-hover: #06655d;
+  --color-brand-soft: #e6f5f1;
   --color-success: #167347;
   --color-warning: #925b08;
   --color-danger: #b42332;
-
-  --shadow-panel: 0 2px 8px rgb(16 29 48 / 4%);
+  --shadow-panel: 0 3px 18px rgb(19 38 61 / 4%), 0 1px 2px rgb(19 38 61 / 3%);
 }
 
 @layer base {
-  html {
-    font-family: var(--font-sans);
-    color: var(--color-ink);
-    background: var(--color-canvas);
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-
-  body {
-    margin: 0;
-    min-width: 320px;
-    min-height: 100vh;
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    font: inherit;
-  }
-
-  button:not(:disabled),
-  a {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  button:not(:disabled) {
-    cursor: pointer;
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-  }
-
-  :focus-visible {
-    outline: 3px solid var(--color-brand);
-    outline-offset: 4px;
-  }
-
-  ::selection {
-    background: #ccebe5;
-    color: #101d30;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
+  html {font-family:var(--font-sans);color:var(--color-ink);background:var(--color-canvas);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;scroll-behavior:smooth}
+  body {margin:0;min-width:320px;min-height:100vh}
+  button,input,select,textarea {font:inherit}
+  button:not(:disabled),a { -webkit-tap-highlight-color:transparent }
+  button:not(:disabled){cursor:pointer}
+  button:disabled{cursor:not-allowed}
+  :focus-visible {outline:3px solid var(--color-brand);outline-offset:3px}
+  ::selection {background:#ccebe5;color:#101d30}
+  table {font-variant-numeric:tabular-nums}
+  th {font-weight:600}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 }
+@layer components {
+  .enterprise-panel {border:1px solid var(--color-line);border-radius:1rem;background:white;box-shadow:var(--shadow-panel)}
+  .metric-number {font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+  .enterprise-button {background:var(--color-brand);color:white;border-radius:.65rem;font-weight:650;transition:background-color .15s,transform .15s}
+  .enterprise-button:hover:not(:disabled){background:var(--color-brand-hover)}
+  .enterprise-button:active:not(:disabled){transform:translateY(1px)}
+}
+
+/* Workspace navigation: each selected area is a dedicated view, not a jump into a long document.
+   These presentation rules do not confer authentication or backend authorisation. */
+[data-access-mode="demo"] #workspace,
+[data-access-mode="demo"] #overview-content,
+[data-access-mode="demo"] #optimization,
+[data-access-mode="demo"] #industry-pilots,
+[data-access-mode="demo"] #decision-workspace,
+[data-access-mode="demo"] #intelligence,
+[data-access-mode="demo"] #orders,
+[data-access-mode="demo"] #connection { display:none }
+[data-active-page="workspace"] #workspace,
+[data-active-page="workspace"] #overview-content,
+[data-active-page="optimization"] #optimization,
+[data-active-page="industry-pilots"] #industry-pilots,
+[data-active-page="decision-workspace"] #decision-workspace,
+[data-active-page="connections"] #decision-workspace,
+[data-active-page="intelligence"] #intelligence,
+[data-active-page="predictions"] #intelligence,
+[data-active-page="simulation"] #intelligence,
+[data-active-page="orders"] #orders,
+[data-active-page="connection"] #connection {display:block}
+[data-active-page="intelligence"] #predictions,
+[data-active-page="intelligence"] #simulation,
+[data-active-page="predictions"] #intelligence > div:first-child,
+[data-active-page="predictions"] #simulation,
+[data-active-page="simulation"] #intelligence > div:first-child,
+[data-active-page="simulation"] #predictions,
+[data-active-page="decision-workspace"] #connections,
+[data-active-page="connections"] #decision-workspace > div:not(#connections) {display:none}
+[data-active-page="connections"] #connections {display:block}
+/* Make all workspace cards usable on small screens and avoid horizontal overflow. */
+[data-access-mode] main {min-width:0}
+[data-access-mode] table {border-collapse:collapse}
+[data-access-mode] th {white-space:nowrap}
+.access-page {background:radial-gradient(circle at 10% 20%,#e2f5f0 0,transparent 38%),radial-gradient(circle at 95% 80%,#e8eef8 0,transparent 38%),var(--color-canvas)}
