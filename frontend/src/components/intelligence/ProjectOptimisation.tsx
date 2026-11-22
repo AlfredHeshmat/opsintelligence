@@ -44,6 +44,8 @@ export function ProjectOptimisation({project, token, canRun, datasetHash}:{proje
  const current=selected && selected.dataset_sha256===datasetHash
  const improvement=selected?.status==='optimal'&&selected.baseline_cost_aud!==null&&selected.objective_cost_aud!==null ? selected.baseline_cost_aud-selected.objective_cost_aud : null
  const dispatched=selected?.decisions.filter(d=>d.action==='dispatch')??[]
+ const comparison=selected?runs.find(run=>run.id!==selected.id&&run.dataset_sha256===selected.dataset_sha256&&run.status==='optimal'&&selected.status==='optimal')??null:null
+ const delta=comparison&&selected&&typeof selected.objective_cost_aud==='number'&&typeof comparison.objective_cost_aud==='number'?selected.objective_cost_aud-comparison.objective_cost_aud:null
  return <section id="enterprise-decisions" className="scroll-mt-24 rounded-2xl border border-line bg-white p-6 shadow-panel" aria-label="Project optimisation">
   <p className="text-xs font-bold uppercase tracking-widest text-brand">CONSTRAINT-AWARE DECISION PLANNING</p>
   <h2 className="mt-2 text-xl font-bold">Project optimisation</h2>
@@ -70,6 +72,16 @@ export function ProjectOptimisation({project, token, canRun, datasetHash}:{proje
    ].map(([label,value])=><div key={label} className="rounded-xl bg-canvas p-3"><p className="text-xs text-muted">{label}</p><p className="mt-2 text-lg font-bold tabular-nums">{value}</p></div>)}</div>
    <p className="mt-3 text-xs text-muted">{selected.solver_message}. Differences are relative to the assumed defer-all model, not observed business savings. The output is a planning result, not an instruction to dispatch.</p>
    {selected.decisions.length>0&&<div className="mt-4 max-h-72 overflow-auto"><table className="w-full min-w-[590px] text-left text-xs"><thead className="sticky top-0 bg-white"><tr className="border-b border-line">{['Order','Warehouse','SKU','Units','Priority','Decision','Modelled cost'].map(h=><th className="px-2 py-2" key={h}>{h}</th>)}</tr></thead><tbody>{selected.decisions.map(d=><tr className="border-b border-line/70" key={d.order_id}><td className="px-2 py-2">{d.order_id}</td><td className="px-2 py-2">{d.warehouse_id}</td><td className="px-2 py-2">{d.sku}</td><td className="px-2 py-2">{d.units}</td><td className="px-2 py-2">{d.priority}</td><td className="px-2 py-2 font-semibold capitalize">{d.action}</td><td className="px-2 py-2 tabular-nums">{cash(d.modelled_cost_aud)}</td></tr>)}</tbody></table></div>}
+  </div>}
+  {selected&&comparison&&<div className="mt-6 rounded-xl border border-line bg-canvas p-4" aria-label="Saved optimisation scenario comparison">
+   <h3 className="text-sm font-bold">Compare saved scenarios</h3>
+   <p className="mt-1 text-xs leading-5 text-muted">Runs #{comparison.id} and #{selected.id} use the same dataset fingerprint. Differences describe the model under different planning assumptions, not realised savings or causal effects.</p>
+   <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[400px] text-left text-sm"><thead><tr className="border-b border-line"><th scope="col" className="py-2">Parameter / result</th><th scope="col" className="py-2">Run #{comparison.id}</th><th scope="col" className="py-2">Run #{selected.id}</th></tr></thead><tbody>
+    <tr className="border-b border-line"><th scope="row" className="py-2 font-medium">Handling capacity</th><td>{comparison.handling_capacity.toLocaleString()} units</td><td>{selected.handling_capacity.toLocaleString()} units</td></tr>
+    <tr className="border-b border-line"><th scope="row" className="py-2 font-medium">Defer penalty</th><td>{cash(comparison.defer_penalty_aud_per_unit)}/unit</td><td>{cash(selected.defer_penalty_aud_per_unit)}/unit</td></tr>
+    <tr><th scope="row" className="py-2 font-medium">Optimised cost</th><td>{cash(comparison.objective_cost_aud)}</td><td>{cash(selected.objective_cost_aud)}</td></tr>
+   </tbody></table></div>
+   {delta!==null&&<p className="mt-3 text-sm font-semibold text-ink">Selected run vs comparison: {delta>0?'+':''}{cash(delta)} modelled cost difference</p>}
   </div>}
   <div className="mt-6"><h3 className="text-sm font-bold">Saved run history <span className="font-normal text-muted">({historyCount} total; latest 10 displayed)</span></h3>{runs.length===0?<p className="mt-2 text-sm text-muted">No runs yet. Submit an optimisation to create an auditable project result.</p>:<div className="mt-3 flex flex-wrap gap-2">{runs.map(run=><button type="button" key={run.id} onClick={()=>setSelected(run)} aria-pressed={selected?.id===run.id} className={`rounded-lg border px-3 py-2 text-xs ${selected?.id===run.id?'border-teal-500 bg-brand-soft text-brand':'border-line bg-white'}`}>#{run.id} · {run.status} {run.dataset_sha256!==datasetHash?'· older CSV':''}</button>)}</div>}</div>
  </section>
