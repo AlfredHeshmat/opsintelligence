@@ -3,3 +3,4 @@ __all__ = ['Capacity','Inventory','OptimizationDecision','OptimizationRun','Orde
 from app.models.identity import User, Organisation, Membership, SessionToken, OrganisationProject, SecurityAudit
 
 from app.models.connectors import ConnectorRegistration
+from app.models.project_data import ProjectDataset, ProjectOrder
