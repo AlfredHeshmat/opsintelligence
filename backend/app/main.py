@@ -11,6 +11,7 @@ from app.api.intelligence import router as intelligence_router
 from app.api.workspace import router as workspace_router
 from app.api.enterprise import router as enterprise_router
 from app.api.connectors import router as connectors_router
+from app.api.industry_pilots import router as industry_pilots_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import create_database_engine
@@ -59,4 +60,5 @@ def create_app() -> FastAPI:
     app.include_router(workspace_router)
     app.include_router(enterprise_router)
     app.include_router(connectors_router)
+    app.include_router(industry_pilots_router)
     return app

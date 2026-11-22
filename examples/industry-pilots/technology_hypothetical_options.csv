@@ -1,0 +1,7 @@
+item_id,option_id,objective_value,cpu_units,region_a_slots
+service_api,region_a,210,4,1
+service_api,region_b,245,3,0
+service_search,region_a,180,5,1
+service_search,region_b,230,4,0
+service_worker,region_a,160,5,1
+service_worker,region_b,190,3,0
