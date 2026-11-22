@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.api.operations import get_db
 from app.models.identity import Membership, Organisation, OrganisationProject, SecurityAudit, SessionToken, User
+from app.models.invitations import OrganisationInvitation
 from app.security.passwords import hash_password, verify_password
 from app.core.config import get_settings
 from app.services.industry_registry import get_industry
@@ -291,3 +292,162 @@ def audit_events(org_id: int, auth: Principal, db: DB):
     events = db.scalars(select(SecurityAudit).where(SecurityAudit.organisation_id == org_id).order_by(SecurityAudit.id.desc()).limit(100)).all()
     return [{'id': x.id, 'action': x.action, 'resource_type': x.resource_type,
              'resource_id': x.resource_id, 'created_at': x.created_at.isoformat()} for x in events]
+
+
+# Phase 4E.3: manually distributed invite codes; no email service or paid provider.
+INVITATION_DAYS = 7
+
+
+class InvitationRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    role: Literal['viewer', 'analyst', 'admin'] = 'viewer'
+
+
+class InvitationAcceptance(BaseModel):
+    code: str = Field(min_length=24, max_length=256)
+    email: str = Field(min_length=5, max_length=254)
+    password: str | None = Field(default=None, min_length=12, max_length=256)
+
+
+def _invitation_state(invite: OrganisationInvitation) -> str:
+    if invite.accepted_at is not None:
+        return 'accepted'
+    if invite.revoked_at is not None:
+        return 'revoked'
+    if invite.expires_at.replace(tzinfo=timezone.utc) <= now():
+        return 'expired'
+    return 'pending'
+
+
+def _invite_view(invite: OrganisationInvitation) -> dict:
+    # Never return the one-time code or its digest from listing endpoints.
+    return {'id': invite.id, 'email': invite.email, 'role': invite.role,
+            'status': _invitation_state(invite), 'expires_at': invite.expires_at.isoformat(),
+            'created_at': invite.created_at.isoformat()}
+
+
+@router.get('/organisations/{org_id}/invitations')
+def list_invitations(org_id: int, auth: Principal, db: DB):
+    user, _ = auth
+    access(db, user, org_id, 'admin')
+    records = db.scalars(select(OrganisationInvitation).where(
+        OrganisationInvitation.organisation_id == org_id
+    ).order_by(OrganisationInvitation.id.desc()).limit(100)).all()
+    return [_invite_view(invite) for invite in records]
+
+
+@router.post('/organisations/{org_id}/invitations', status_code=201)
+def create_invitation(org_id: int, payload: InvitationRequest, auth: Principal, db: DB):
+    user, _ = auth
+    actor = access(db, user, org_id, 'admin')
+    if payload.role == 'admin' and actor.role != 'owner':
+        raise HTTPException(403, 'Only organisation owners may invite administrators')
+    email = payload.email.strip().lower()
+    if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email):
+        raise HTTPException(422, 'Valid email required')
+    target_user = db.scalar(select(User).where(User.email == email))
+    if target_user is not None and db.scalar(select(Membership.id).where(
+        Membership.user_id == target_user.id, Membership.organisation_id == org_id
+    )) is not None:
+        raise HTTPException(409, 'User already belongs to this organisation')
+    # Lock the stable (organisation,email) row to prevent competing invitations.
+    previous = db.scalar(select(OrganisationInvitation).where(
+        OrganisationInvitation.organisation_id == org_id,
+        OrganisationInvitation.email == email
+    ).with_for_update())
+    if previous is not None and _invitation_state(previous) == 'pending':
+        raise HTTPException(409, 'An active invitation already exists; revoke it first')
+    code = secrets.token_urlsafe(36)
+    digest = sha256(code.encode()).hexdigest()
+    expiry = now() + timedelta(days=INVITATION_DAYS)
+    if previous is None:
+        invite = OrganisationInvitation(organisation_id=org_id, email=email, role=payload.role,
+                                        code_digest=digest, expires_at=expiry, created_by=user.id)
+        db.add(invite)
+    else:
+        invite = previous
+        invite.role = payload.role
+        invite.code_digest = digest
+        invite.expires_at = expiry
+        invite.created_by = user.id
+        invite.accepted_by = None
+        invite.accepted_at = None
+        invite.revoked_at = None
+    try:
+        db.flush()
+        audit(db, user.id, org_id, 'invitation.created', 'invitation', invite.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Invitation conflict; retry') from None
+    # Only this creation response exposes the code. Treat it as a password.
+    return {**_invite_view(invite), 'code': code}
+
+
+@router.delete('/organisations/{org_id}/invitations/{invitation_id}', status_code=204)
+def revoke_invitation(org_id: int, invitation_id: int, auth: Principal, db: DB):
+    user, _ = auth
+    actor = access(db, user, org_id, 'admin')
+    invite = db.scalar(select(OrganisationInvitation).where(
+        OrganisationInvitation.id == invitation_id,
+        OrganisationInvitation.organisation_id == org_id
+    ).with_for_update())
+    if invite is None:
+        raise HTTPException(404, 'Invitation not found')
+    if invite.role == 'admin' and actor.role != 'owner':
+        raise HTTPException(403, 'Only owners may revoke administrator invitations')
+    if _invitation_state(invite) != 'pending':
+        raise HTTPException(409, 'Only pending invitations may be revoked')
+    invite.revoked_at = now()
+    audit(db, user.id, org_id, 'invitation.revoked', 'invitation', invite.id)
+    db.commit()
+
+
+@router.post('/auth/invitations/accept')
+def accept_invitation(payload: InvitationAcceptance, db: DB,
+                      credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]):
+    """New invitee creates an identity; existing identity must be logged in.
+
+    An invitation alone cannot reset or take over an existing account.
+    """
+    email = payload.email.strip().lower()
+    digest = sha256(payload.code.encode()).hexdigest()
+    invite = db.scalar(select(OrganisationInvitation).where(
+        OrganisationInvitation.code_digest == digest
+    ).with_for_update())
+    if invite is None or invite.email != email or _invitation_state(invite) != 'pending':
+        raise HTTPException(400, 'Invitation invalid, expired or already used')
+    existing = db.scalar(select(User).where(User.email == email))
+    if existing is not None:
+        # Authenticated acceptance protects pre-existing accounts from claim-by-code.
+        if credentials is None or credentials.scheme.lower() != 'bearer':
+            raise HTTPException(401, 'This email already has an account. Sign in before accepting the invitation.')
+        session = db.scalar(select(SessionToken).where(
+            SessionToken.token_digest == sha256(credentials.credentials.encode()).hexdigest()
+        ))
+        if (session is None or session.user_id != existing.id or session.revoked_at is not None
+                or session.expires_at.replace(tzinfo=timezone.utc) <= now()):
+            raise HTTPException(403, 'Sign in as the invited email address to accept')
+        invitee = existing
+    else:
+        if not payload.password:
+            raise HTTPException(422, 'A password of at least 12 characters is required for new employees')
+        invitee = User(email=email, password_hash=hash_password(payload.password), failed_logins=0)
+        db.add(invitee)
+        db.flush()
+    if db.scalar(select(Membership.id).where(
+        Membership.organisation_id == invite.organisation_id,
+        Membership.user_id == invitee.id
+    )) is not None:
+        raise HTTPException(409, 'Already a member of this organisation')
+    db.add(Membership(organisation_id=invite.organisation_id, user_id=invitee.id, role=invite.role))
+    invite.accepted_by = invitee.id
+    invite.accepted_at = now()
+    audit(db, invitee.id, invite.organisation_id, 'invitation.accepted', 'invitation', invite.id)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Invitation already accepted or membership conflict') from None
+    return {'message': 'Invitation accepted. Your organisation access is ready.',
+            'organisation_id': invite.organisation_id, 'role': invite.role}

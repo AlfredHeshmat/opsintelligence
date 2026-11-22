@@ -4,3 +4,4 @@ from app.models.identity import User, Organisation, Membership, SessionToken, Or
 
 from app.models.connectors import ConnectorRegistration
 from app.models.project_data import ProjectDataset, ProjectOrder
+from app.models.invitations import OrganisationInvitation
