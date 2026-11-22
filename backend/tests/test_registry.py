@@ -67,8 +67,10 @@ def test_registry_unknown_industry_404():
 def test_solver_capabilities_are_explicit_and_safe():
     capabilities = solver_capabilities()
     assert capabilities['auto_execute'] is False
-    assert len(capabilities['adapters']) == 1
-    assert capabilities['adapters'][0]['verified_for_company_data'] is False
+    assert len(capabilities['adapters']) == 2
+    assert all(adapter['verified_for_company_data'] is False for adapter in capabilities['adapters'])
+    assert capabilities['adapters'][0]['status'] == 'demonstration'
+    assert capabilities['adapters'][1]['validated_for_synthetic_project_csv'] is True
 
 
 def test_weak_csv_classification_new_domains():

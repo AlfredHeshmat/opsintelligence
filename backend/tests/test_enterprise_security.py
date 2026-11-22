@@ -17,6 +17,7 @@ from app.security.passwords import hash_password, verify_password
 @pytest.fixture
 def fixture_client(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://test:test@localhost/test')
+    monkeypatch.setenv('OPS_ALLOW_LEGACY_MEMBER_ADD', 'true')
     get_settings.cache_clear()
     engine = create_engine('sqlite+pysqlite:///:memory:', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
@@ -128,3 +129,92 @@ def test_expired_session_and_nonmember_exclusion(fixture_client):
         session.expires_at=datetime.now(timezone.utc)-timedelta(minutes=1)
         db.commit()
     assert client.get('/api/v1/enterprise/auth/me',headers=auth(token)).status_code==401
+
+
+def test_role_change_and_revocation_are_server_enforced(fixture_client):
+    client, engine, (alpha, beta) = fixture_client
+    owner = login(client, 'alpha@example.com', 'correct-horse-unique-one').json()['access_token']
+    beta_owner = login(client, 'beta@example.com', 'correct-horse-unique-two').json()['access_token']
+    viewer = login(client, 'viewer@example.com', 'correct-horse-unique-viewer').json()['access_token']
+    url = f'/api/v1/enterprise/organisations/{alpha}/members'
+    with Session(engine) as db:
+        user_id = db.scalar(select(User.id).where(User.email == 'viewer@example.com'))
+        owner_id = db.scalar(select(User.id).where(User.email == 'alpha@example.com'))
+    assert client.patch(f'{url}/{user_id}', headers=auth(viewer), json={'role': 'admin'}).status_code == 403
+    assert client.delete(f'{url}/{owner_id}', headers=auth(owner)).status_code == 403
+    assert client.patch(f'{url}/{owner_id}', headers=auth(owner), json={'role': 'viewer'}).status_code == 403
+    assert client.patch(f'{url}/{user_id}', headers=auth(beta_owner), json={'role': 'analyst'}).status_code == 404
+    assert client.patch(f'{url}/{user_id}', headers=auth(owner), json={'role': 'analyst'}).json()['role'] == 'analyst'
+    assert client.post(f'/api/v1/enterprise/organisations/{alpha}/projects', headers=auth(viewer), json={'name':'Authorised now', 'industry_id':'logistics'}).status_code == 201
+    assert client.delete(f'{url}/{user_id}', headers=auth(owner)).status_code == 204
+    assert client.get(f'/api/v1/enterprise/organisations/{alpha}/projects', headers=auth(viewer)).status_code == 404
+    assert client.patch(f'{url}/{user_id}', headers=auth(owner), json={'role':'viewer'}).status_code == 404
+    actions = [event['action'] for event in client.get(f'/api/v1/enterprise/organisations/{alpha}/audit',headers=auth(owner)).json()]
+    assert 'member.role_changed' in actions
+    assert 'member.removed' in actions
+    assert client.get(f'/api/v1/enterprise/organisations/{beta}/audit', headers=auth(owner)).status_code == 404
+
+
+def test_administrators_cannot_promote_admins_or_manage_owner(fixture_client):
+    client, engine, (alpha, _) = fixture_client
+    owner = login(client, 'alpha@example.com', 'correct-horse-unique-one').json()['access_token']
+    base = f'/api/v1/enterprise/organisations/{alpha}/members'
+    assert client.post(base, headers=auth(owner), json={'email':'beta@example.com','role':'admin'}).status_code == 201
+    admin = login(client, 'beta@example.com', 'correct-horse-unique-two').json()['access_token']
+    with Session(engine) as db:
+        viewer_id = db.scalar(select(User.id).where(User.email == 'viewer@example.com'))
+        owner_id = db.scalar(select(User.id).where(User.email == 'alpha@example.com'))
+    assert client.patch(f'{base}/{viewer_id}', headers=auth(admin), json={'role':'admin'}).status_code == 403
+    assert client.post(base, headers=auth(admin), json={'email':'notfound@example.com','role':'admin'}).status_code == 403
+    assert client.patch(f'{base}/{owner_id}', headers=auth(admin), json={'role':'viewer'}).status_code == 403
+    assert client.delete(f'{base}/{owner_id}', headers=auth(admin)).status_code == 403
+    assert client.patch(f'{base}/{viewer_id}', headers=auth(admin), json={'role':'analyst'}).status_code == 200
+    assert client.delete(f'{base}/{viewer_id}', headers=auth(admin)).status_code == 204
+
+
+def test_logout_all_revokes_multiple_sessions_without_exposing_tokens(fixture_client):
+    client, engine, _ = fixture_client
+    first = login(client, 'alpha@example.com', 'correct-horse-unique-one').json()['access_token']
+    second = login(client, 'alpha@example.com', 'correct-horse-unique-one').json()['access_token']
+    sessions = client.get('/api/v1/enterprise/auth/sessions', headers=auth(first))
+    assert sessions.status_code == 200
+    assert len(sessions.json()) == 2
+    assert sum(1 for s in sessions.json() if s['current']) == 1
+    assert first not in str(sessions.json()) and second not in str(sessions.json())
+    assert 'token_digest' not in str(sessions.json())
+    assert client.post('/api/v1/enterprise/auth/logout-all', headers=auth(second)).status_code == 204
+    assert client.get('/api/v1/enterprise/auth/me', headers=auth(first)).status_code == 401
+    assert client.get('/api/v1/enterprise/auth/me', headers=auth(second)).status_code == 401
+
+
+def test_local_registration_creates_isolated_owner_and_does_not_join_existing_company(fixture_client,monkeypatch):
+    client,engine,(alpha,beta)=fixture_client
+    monkeypatch.setenv('OPS_ENABLE_LOCAL_SIGNUP','true')
+    get_settings.cache_clear()
+    data={'organisation_name':'Gamma Logistics','email':'gamma@example.com','password':'a-unique-password-of-adequate-length'}
+    created=client.post('/api/v1/enterprise/auth/register-company',json=data)
+    assert created.status_code==201, created.text
+    gamma_org=created.json()['organisation_id']
+    assert gamma_org not in (alpha,beta)
+    assert client.post('/api/v1/enterprise/auth/register-company',json=data).status_code==409
+    token=login(client,data['email'],data['password']).json()['access_token']
+    me=client.get('/api/v1/enterprise/auth/me',headers=auth(token)).json()
+    assert me['organisations']==[{'id':gamma_org,'name':'Gamma Logistics','role':'owner'}]
+    assert client.get(f'/api/v1/enterprise/organisations/{alpha}/members',headers=auth(token)).status_code==404
+    with Session(engine) as db:
+        assert db.scalar(select(SecurityAudit).where(SecurityAudit.action=='organisation.registered', SecurityAudit.organisation_id==gamma_org))
+
+
+def test_registration_disabled_by_default_and_input_validated(fixture_client,monkeypatch):
+    client,engine,_=fixture_client
+    monkeypatch.setenv('OPS_ENABLE_LOCAL_SIGNUP','false')
+    get_settings.cache_clear()
+    endpoint='/api/v1/enterprise/auth/register-company'
+    data={'organisation_name':'Gamma','email':'gamma@example.com','password':'long-password-for-local-testing'}
+    assert client.post(endpoint,json=data).status_code==403
+    monkeypatch.setenv('OPS_ENABLE_LOCAL_SIGNUP','true')
+    get_settings.cache_clear()
+    assert client.post(endpoint,json={**data,'email':'no-at-sign'}).status_code==422
+    assert client.post(endpoint,json={**data,'password':'short'}).status_code==422
+    with Session(engine) as db:
+        assert db.scalar(select(User).where(User.email=='gamma@example.com')) is None
