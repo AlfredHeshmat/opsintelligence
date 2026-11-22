@@ -51,7 +51,7 @@ export function AppShell({children,mode='demo',onExit=()=>{}}:{children:ReactNod
   const update=()=>setActiveSection(window.location.hash.slice(1)||(mode==='demo'?'workspace':'enterprise-workspace'))
   window.addEventListener('hashchange',update)
   return()=>window.removeEventListener('hashchange',update)
- },[])
+ },[mode])
  return <div data-active-page={activeSection} data-access-mode={mode} className="min-h-screen bg-canvas">
   <a href="#main-content" className="sr-only fixed left-3 top-3 z-50 rounded-lg bg-surface px-4 py-3 text-ink shadow-panel focus:not-sr-only">Skip to content</a>
   <aside className="fixed inset-y-0 left-0 hidden w-[272px] lg:block"><Sidebar activeSection={activeSection} mode={mode} onExit={onExit}/></aside>

@@ -6,12 +6,16 @@ import { EnterpriseIntelligence } from './components/intelligence/EnterpriseInte
 import { DecisionWorkspace } from './components/intelligence/DecisionWorkspace'
 import { IndustryPilotStudio } from './components/intelligence/IndustryPilotStudio'
 import { OrganisationWorkspace } from './components/intelligence/OrganisationWorkspace'
+import { OrdersExplorer } from './components/intelligence/OrdersExplorer'
+import { TrendExplorer } from './components/intelligence/TrendExplorer'
+import { WorkflowGuide } from './components/layout/WorkflowGuide'
 
 type Overview = {synthetic: boolean; total_orders: number; pending_orders: number; delivered_orders: number; late_deliveries: number; on_time_rate: number | null; pending_units:number; daily_handling_capacity:number|null; inventory_units:number; trend: {date:string; orders:number; delayed:number}[]}
 type Alert = {severity:string; metric:string; value:number; message:string}
 type Decision = {order_id:number; action:string; shipping_option:string|null; estimated_cost:number}
 type Run = {id:number; status:string; objective_value:number|null; baseline_cost:number|null; estimated_savings:number|null; solver_message:string; handling_capacity:number; labour_capacity_hours:number; decisions:Decision[]}
-type Order = {id:number;sku:string;quantity:number;priority:number;status:string;promised_at:string;revenue:number}
+import type { OrderRecord } from './components/intelligence/ordersUtils'
+type Order = OrderRecord
 const API=(import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/,'')
 async function request<T>(path:string, init?:RequestInit):Promise<T>{const response=await fetch(`${API}/api/v1${path}`,init);if(!response.ok){let message=`Request failed (${response.status})`;try{const body=await response.json() as {detail?:string};if(body.detail) message=body.detail}catch{/* ignore */}throw new Error(message)}return response.json() as Promise<T>}
 const money=(n:number|null)=>n===null?'—':new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:0}).format(n)
@@ -33,14 +37,22 @@ export default function App(){
  const [handling,setHandling]=useState('')
  const [labour,setLabour]=useState('')
  async function refresh(){setLoading(true);setError('');try{const [o,r,a]=await Promise.all([request<Overview>('/operations/overview'),request<Order[]>('/orders?limit=30'),request<{alerts:Alert[]}>('/anomalies')]);setOverview(o);setOrders(r);setAlerts(a.alerts)}catch(e){setError(e instanceof Error?e.message:'Failed to load operations')}finally{setLoading(false)}}
- useEffect(()=>{if(mode==='demo')void refresh()},[mode])
+ useEffect(()=>{
+  if(mode!=='demo')return
+  let active=true
+  void Promise.all([request<Overview>('/operations/overview'),request<Order[]>('/orders?limit=30'),request<{alerts:Alert[]}>('/anomalies')])
+   .then(([o,r,a])=>{if(active){setOverview(o);setOrders(r);setAlerts(a.alerts)}})
+   .catch(e=>{if(active)setError(e instanceof Error?e.message:'Failed to load operations')})
+   .finally(()=>{if(active)setLoading(false)})
+  return()=>{active=false}
+ },[mode])
  async function seed(){setBusy(true);setError('');try{await request('/data/seed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count:240,seed:42})});await refresh();setRefreshKey(k=>k+1)}catch(e){setError(e instanceof Error?e.message:'Seed failed')}finally{setBusy(false)}}
  async function solve(){setBusy(true);setError('');try{const config={handling_capacity:handling===''?null:Number(handling),labour_hours:labour===''?null:Number(labour)};setRun(await request<Run>('/optimization/solve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}))}catch(e){setError(e instanceof Error?e.message:'Optimisation failed')}finally{setBusy(false)}}
- const maxTrend=Math.max(1,...(overview?.trend.map(t=>t.orders)||[]))
  if(mode===null)return <AccessGate onChoose={chooseMode}/>
  if(mode==='enterprise')return <AppShell mode="enterprise" onExit={exitMode}><OrganisationWorkspace onExit={exitMode}/></AppShell>
  return <AppShell mode="demo" onExit={exitMode}>
   <section aria-label="Workspace guidance" className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white px-5 py-4 shadow-panel"><div><p className="text-xs font-bold uppercase tracking-widest text-brand">{activePage==='workspace'?'Your starting point':'Workspace guide'}</p><p className="mt-1 text-sm text-muted">{pageGuidance[activePage]??'Explore this synthetic workspace. Source data and solver assumptions are labelled throughout.'}</p></div><span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">Public synthetic demo</span></section>
+  <WorkflowGuide activePage={activePage}/>
   <section id="workspace" className="scroll-mt-24">
    <div className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs font-semibold uppercase tracking-widest text-brand">OPERATIONS INTELLIGENCE · WAREHOUSE DEMO</span><span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand">Synthetic dataset · local</span></div>
    <h1 className="mt-4 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Operations command centre</h1>
@@ -58,7 +70,7 @@ export default function App(){
     {([{label:'Total orders',value:overview.total_orders.toLocaleString(),detail:'All records'},{label:'Pending orders',value:overview.pending_orders.toLocaleString(),detail:`${overview.pending_units} units awaiting fulfilment`},{label:'On-time delivery',value:overview.on_time_rate===null?'—':`${overview.on_time_rate}%`,detail:`${overview.late_deliveries} recorded late`},{label:'Available inventory',value:overview.inventory_units.toLocaleString(),detail:'Units across all SKUs'}]).map(item=><section key={item.label} className="relative overflow-hidden rounded-2xl border border-line bg-surface p-5 shadow-panel"><span aria-hidden="true" className="absolute left-0 top-0 h-1 w-full bg-teal-600/70"/><p className="text-xs font-semibold uppercase tracking-wide text-muted">{item.label}</p><p className="metric-number mt-3 text-3xl font-bold text-ink sm:text-4xl">{item.value}</p><p className="mt-2 text-xs text-muted">{item.detail}</p></section>)}
    </div>
    <div className="mt-6 grid gap-6 xl:grid-cols-[1.7fr_1fr]">
-    <section className="rounded-2xl border border-line bg-surface p-6 shadow-panel"><h2 className="text-lg font-semibold">Order volume over time</h2><p className="mt-1 text-xs text-muted">Daily count · database-derived</p><div className="mt-6 flex h-52 items-end gap-1" role="img" aria-label="Daily order volume chart">{overview.trend.map(item=><div title={`${item.date}: ${item.orders} orders, ${item.delayed} delayed`} key={item.date} className="min-w-0 flex-1 rounded-t bg-teal-600/80 transition-colors hover:bg-teal-800" style={{height:`${Math.max(3,100*item.orders/maxTrend)}%`}} />)}</div><div className="mt-2 flex justify-between text-xs text-muted"><span>{overview.trend[0]?.date}</span><span>{overview.trend.at(-1)?.date}</span></div></section>
+    <TrendExplorer trend={overview.trend}/>
     <section className="rounded-2xl border border-line bg-surface p-6 shadow-panel"><h2 className="text-lg font-semibold">Operational alerts</h2><p className="mt-1 text-xs text-muted">Explainable rules · indicative thresholds</p><div className="mt-5 space-y-3">{alerts.length?alerts.map(alert=><div key={alert.metric} className="rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-semibold uppercase text-amber-800">{alert.severity} priority</p><p className="mt-1 text-sm text-ink">{alert.message}</p><p className="mt-2 text-xs text-muted">{alert.metric}: {alert.value}</p></div>):<p className="text-sm text-muted">No threshold alerts in current data.</p>}</div></section>
    </div>
    </div>
@@ -68,7 +80,7 @@ export default function App(){
     <DecisionWorkspace />
     <IndustryPilotStudio />
    <EnterpriseIntelligence runId={run?.id??null} refreshKey={refreshKey} />
-   <section id="orders" className="mt-6 rounded-2xl border border-line bg-surface p-6 shadow-panel"><h2 className="text-lg font-semibold">Recent operational orders</h2><p className="mt-1 text-xs text-muted">Showing first 30 records · synthetic demonstration data</p><div className="mt-4 overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-muted"><th className="p-2">ID</th><th className="p-2">SKU</th><th className="p-2">Units</th><th className="p-2">Priority</th><th className="p-2">Status</th><th className="p-2">Promised</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} className="border-b border-line/70"><td className="p-2">#{o.id}</td><td className="p-2">{o.sku}</td><td className="p-2">{o.quantity}</td><td className="p-2">{o.priority}</td><td className="p-2 capitalize">{o.status}</td><td className="p-2">{o.promised_at.slice(0,10)}</td></tr>)}</tbody></table></div></section>
+   <OrdersExplorer orders={orders} />
   </>}
   <div id="connection" className="mt-6"><ApiStatus /></div>
   <footer className="mt-10 border-t border-line pt-5 text-xs text-muted">OpsIntelligence · Local warehouse operations demonstration · Synthetic data · Decisions require independent validation</footer>

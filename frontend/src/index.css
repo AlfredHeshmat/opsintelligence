@@ -74,3 +74,35 @@
 [data-access-mode] table {border-collapse:collapse}
 [data-access-mode] th {white-space:nowrap}
 .access-page {background:radial-gradient(circle at 10% 20%,#e2f5f0 0,transparent 38%),radial-gradient(circle at 95% 80%,#e8eef8 0,transparent 38%),var(--color-canvas)}
+
+/* Phase 4D.2: coherent, accessible controls for data-dense workspaces. */
+@layer components {
+ .eyebrow {font-size:.69rem;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:var(--color-brand)}
+ .field-label {display:block;font-size:.76rem;font-weight:600;color:var(--color-muted)}
+ .field-control {display:block;width:100%;min-height:40px;margin-top:6px;padding:8px 12px;border:1px solid var(--color-line);border-radius:.65rem;background:white;color:var(--color-ink)}
+ .field-control:focus-visible {border-color:var(--color-brand)}
+ .secondary-action {display:inline-flex;justify-content:center;align-items:center;min-height:40px;padding:8px 13px;border:1px solid var(--color-line);border-radius:.65rem;background:white;color:var(--color-ink);font-size:.8rem;font-weight:650;transition:background-color .15s}
+ .secondary-action:hover:not(:disabled){background:var(--color-brand-soft)}
+ .secondary-action:disabled{opacity:.42}
+ .data-grid thead{background:#f5f8fb}
+ .data-grid th,.data-grid td{padding:12px 14px;border-bottom:1px solid var(--color-line)}
+ .data-grid tbody tr:last-child td{border-bottom:0}
+ .data-grid tbody tr:hover{background:#f6faf9}
+ .data-grid tbody tr:nth-child(even){background:#fbfcfe}
+ .sort-button{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;text-align:left;font-size:.75rem;font-weight:700;color:var(--color-muted)}
+ .sort-button:hover{color:var(--color-brand)}
+ .status-chip{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:.7rem;font-weight:700;line-height:1.2}
+ .status-good{background:#e3f5ea;color:#11653c}
+ .status-neutral{background:#eef3f8;color:#425972}
+ .trend-bar{transition:background-color .12s,filter .12s;min-height:4px}
+ .trend-bar:hover{filter:brightness(.85)}
+ .workflow-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+ .workflow-step{display:flex;height:100%;align-items:flex-start;gap:10px;padding:11px;border:1px solid var(--color-line);border-radius:12px;background:#f8fafc;transition:border-color .15s,background-color .15s}
+ .workflow-step:hover{border-color:#72cbbd;background:#f1faf7}
+ .workflow-current{border-color:#1da999;background:#e7f7f2;box-shadow:inset 0 0 0 1px #86d2c4}
+ .workflow-number{display:grid;place-items:center;flex-shrink:0;width:25px;height:25px;border-radius:8px;background:#e6eeef;color:var(--color-brand);font-size:.69rem;font-weight:800}
+ .workflow-current .workflow-number{background:var(--color-brand);color:#fff}
+ @media(max-width:1180px){.workflow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ @media(max-width:700px){.workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+ @media(max-width:390px){.workflow-grid{grid-template-columns:1fr}}
+}
