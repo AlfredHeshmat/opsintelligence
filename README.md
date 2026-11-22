@@ -98,3 +98,9 @@ For zero-cost deployment strategy, staging gates and exact restrictions, read [R
 - [Earlier development phases](docs/development-plan.md)
 
 **Cost commitment:** No mandatory subscription or paid cloud/API dependencies. Local execution still uses your hardware, electricity and network; a permanent reliable public backend cannot be guaranteed free.
+
+## Public recruiter deployment (synthetic demo only)
+
+See [`docs/public-zero-cost-deployment.md`](docs/public-zero-cost-deployment.md) for the free-tier Cloudflare Pages + Render + Neon deployment blueprint, public-only backend/frontend configuration, limitations and smoke tests. The release verification checklist is in [`docs/public-deployment-verification.md`](docs/public-deployment-verification.md).
+
+**The public build must hide the enterprise login and omit enterprise routes at the API layer.** Private company data, accounts, invitation codes, and credentials must never be moved to the public demo. No public URL has been deployed or verified by this repository change alone.

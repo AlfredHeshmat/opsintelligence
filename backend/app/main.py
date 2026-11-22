@@ -1,5 +1,10 @@
 import logging
+import time
+from collections import deque
 from collections.abc import AsyncIterator
+from threading import Lock
+
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -55,12 +60,37 @@ def create_app() -> FastAPI:
             response.headers['X-Content-Type-Options'] = 'nosniff'
         return response
 
+    if settings.ops_public_demo_only:
+        # Best-effort process-local budget for the intentionally public, bounded
+        # demo calculations. Not a substitute for edge rate limiting / WAF.
+        recent_writes: deque[float] = deque()
+        writes_lock = Lock()
+
+        @app.middleware("http")
+        async def restrict_public_demo(request, call_next):
+            path = request.url.path
+            if path.startswith("/api/v1/enterprise"):
+                return JSONResponse(status_code=404, content={"detail": "Enterprise APIs are not deployed on this public demo"})
+            if path == "/api/v1/data/seed":
+                return JSONResponse(status_code=403, content={"detail": "Public demo data is fixed; reset is disabled"})
+            if request.method not in ("GET", "HEAD", "OPTIONS"):
+                now = time.monotonic()
+                with writes_lock:
+                    while recent_writes and now - recent_writes[0] > 60:
+                        recent_writes.popleft()
+                    if len(recent_writes) >= 30:
+                        return JSONResponse(status_code=429, content={"detail": "Demo computation limit reached; please try again later"}, headers={"Retry-After": "60"})
+                    recent_writes.append(now)
+            return await call_next(request)
+
     app.include_router(router)
     app.include_router(operations_router)
     app.include_router(intelligence_router)
     app.include_router(workspace_router)
-    app.include_router(enterprise_router)
-    app.include_router(connectors_router)
+    if not settings.ops_public_demo_only:
+        app.include_router(enterprise_router)
+        app.include_router(connectors_router)
     app.include_router(industry_pilots_router)
-    app.include_router(project_data_router)
+    if not settings.ops_public_demo_only:
+        app.include_router(project_data_router)
     return app
