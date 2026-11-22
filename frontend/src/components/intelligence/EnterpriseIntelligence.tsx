@@ -30,6 +30,7 @@ export function EnterpriseIntelligence({runId,refreshKey}:Props){
  const [model,setModel]=useState<ModelReport|null>(null)
  const [predictions,setPredictions]=useState<Predictions|null>(null)
  const [sim,setSim]=useState<Simulation|null>(null)
+ const [previousSim,setPreviousSim]=useState<Simulation|null>(null)
  const [delay,setDelay]=useState(20)
  const [penalty,setPenalty]=useState(8)
  const [costFactor,setCostFactor]=useState(100)
@@ -62,7 +63,8 @@ export function EnterpriseIntelligence({runId,refreshKey}:Props){
   void get<Predictions>(`/predictions/delays?${params}`).then(data=>{if(active)setPredictions(data)}).catch(e=>{if(active)setProblem(String(e))})
   return()=>{active=false}
  },[model,sku,refreshKey])
- useEffect(()=>{setSim(null)},[runId])
+ useEffect(()=>{setSim(null);setPreviousSim(null)},[runId])
+ const assumptionsChanged=Boolean(sim&&(Math.abs(sim.assumptions.delay_probability-delay/100)>0.00001||sim.assumptions.late_penalty_per_unit!==penalty||Math.abs(sim.assumptions.shipping_cost_multiplier-costFactor/100)>0.00001||sim.assumptions.trials!==trials))
  const products=performance?.products??[]
  const maxOrders=Math.max(1,...products.map(p=>p.orders))
  const avgRisk=useMemo(()=>{
@@ -76,6 +78,7 @@ export function EnterpriseIntelligence({runId,refreshKey}:Props){
  }
  async function simulate(){if(!runId)return;setBusy('simulate');setProblem('');setMessage('');try{
   const result=await get<Simulation>('/scenarios/compare',post({optimization_run_id:runId,trials,seed:42,delay_probability:delay/100,late_penalty_per_unit:penalty,shipping_cost_multiplier:costFactor/100}))
+  setPreviousSim(sim)
   setSim(result)
  }catch(e){setProblem(e instanceof Error?e.message:String(e))}finally{setBusy('')}
  }
@@ -108,6 +111,7 @@ export function EnterpriseIntelligence({runId,refreshKey}:Props){
    <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-widest text-brand">Predictive analytics</p><h2 className="mt-1 text-xl font-semibold">Delay risk prediction</h2><p className="mt-1 text-sm text-muted">Chronological holdout evaluation · synthetic learning data · decision-time features only</p></div><button disabled={busy!==''} onClick={()=>void train()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50">{busy==='train'?'Training…':model?'Retrain model':'Train delay model'}</button></div>
    {!model?<p className="mt-5 rounded-lg bg-canvas p-4 text-sm text-muted">No model trained yet. Train the local model to see evaluated performance and order risk scores.</p>:<>
     <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Holdout F1" value={model.f1.toFixed(2)} detail="Synthetic holdout only"/><Metric label="Holdout ROC-AUC" value={model.roc_auc===null?'Unavailable':model.roc_auc.toFixed(2)}/><Metric label="Holdout accuracy" value={pct(model.accuracy*100)} detail={`Majority baseline ${pct(model.majority_baseline_accuracy*100)}`}/><Metric label="Average pending risk" value={avgRisk===null?'—':pct(avgRisk*100)} detail="Model estimated, not observed"/></div>
+    {(model.f1===0||model.recall===0||model.accuracy<=model.majority_baseline_accuracy)&&<div role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Model quality warning</strong><p className="mt-1 text-xs leading-5">The model does not outperform the majority-class accuracy baseline or fails to detect delayed orders at its evaluated threshold. Risk scores are exploratory and must not drive production decisions.</p></div>}
     <p className="mt-3 text-xs text-muted">Training: {model.trained_on} records · Holdout: {model.tested_on} records · Precision {model.precision.toFixed(2)} · Recall {model.recall.toFixed(2)}. Do not interpret model scores as validated real-world forecasts.</p>
     <div className="mt-5 overflow-x-auto"><h3 className="mb-2 text-sm font-semibold">Pending orders at risk {sku&&`· ${sku}`}</h3><table className="w-full text-left text-sm"><thead><tr className="border-b border-line text-muted"><th className="p-2">Order</th><th className="p-2">SKU</th><th className="p-2 text-right">Units</th><th className="p-2 text-right">Estimated risk</th><th className="p-2">Level</th></tr></thead><tbody>{(predictions?.predictions??[]).slice().sort((a,b)=>b.delay_probability-a.delay_probability).slice(0,12).map(p=><tr key={p.order_id} className="border-b border-line/60"><td className="p-2">#{p.order_id}</td><td className="p-2">{p.sku}</td><td className="p-2 text-right">{p.quantity}</td><td className="p-2 text-right">{pct(p.delay_probability*100)}</td><td className="p-2 capitalize">{p.risk_level}</td></tr>)}</tbody></table></div>
    </>}
@@ -122,7 +126,25 @@ export function EnterpriseIntelligence({runId,refreshKey}:Props){
      <label className="text-sm text-muted">Simulation trials<select value={trials} onChange={e=>setTrials(Number(e.target.value))} className="mt-1 block w-full rounded-lg border border-line bg-white px-3 py-2 text-ink"><option value={500}>500</option><option value={1000}>1,000</option><option value={3000}>3,000</option></select></label>
     </div>
     <button onClick={()=>void simulate()} disabled={busy!==''} className="mt-5 rounded-lg bg-brand px-5 py-2.5 font-semibold text-white hover:bg-brand-hover disabled:opacity-50">{busy==='simulate'?'Simulating…':'Run scenario comparison'}</button>
+    {assumptionsChanged&&<p role="status" className="mt-2 text-xs font-medium text-amber-800">Inputs changed. The results below describe the previous run; select Run scenario comparison to recalculate.</p>}
     {sim&&<><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Illustrative baseline" value={money(sim.baseline_cost)} detail="Defer-all penalty"/><Metric label="Expected plan cost" value={money(sim.results.expected_plan_cost)} detail="Monte Carlo average"/><Metric label="Expected improvement" value={money(sim.results.expected_improvement)} detail="May be negative"/><Metric label="Chance plan beats baseline" value={pct(100*sim.results.probability_below_baseline)}/></div>
+      <div className="mt-5 rounded-xl border border-line bg-white p-4 sm:p-5" aria-label="Scenario run comparison">
+       <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="text-sm font-semibold">Scenario comparison</h3><p className="mt-1 text-xs text-muted">The current and previous runs use the same warehouse decision run #{sim.run_id}. Only the declared simulation assumptions differ.</p></div><span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">{previousSim?'2 runs compared':'1 run recorded'}</span></div>
+       {previousSim?<>
+        <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[470px] text-left text-xs"><thead><tr className="border-b border-line text-muted"><th className="py-2">Assumption / outcome</th><th>Previous run</th><th>Latest run</th></tr></thead><tbody>
+         <tr className="border-b border-line/70"><td className="py-2">Additional delay risk</td><td>{(previousSim.assumptions.delay_probability*100).toFixed(0)}%</td><td>{(sim.assumptions.delay_probability*100).toFixed(0)}%</td></tr>
+         <tr className="border-b border-line/70"><td className="py-2">Delay penalty per unit</td><td>{money(previousSim.assumptions.late_penalty_per_unit)}</td><td>{money(sim.assumptions.late_penalty_per_unit)}</td></tr>
+         <tr className="border-b border-line/70"><td className="py-2">Shipping cost factor</td><td>{(previousSim.assumptions.shipping_cost_multiplier*100).toFixed(0)}%</td><td>{(sim.assumptions.shipping_cost_multiplier*100).toFixed(0)}%</td></tr>
+         <tr className="border-b border-line/70"><td className="py-2">Simulation trials</td><td>{previousSim.assumptions.trials.toLocaleString()}</td><td>{sim.assumptions.trials.toLocaleString()}</td></tr>
+         <tr className="font-semibold"><td className="py-2">Expected model cost</td><td>{money(previousSim.results.expected_plan_cost)}</td><td>{money(sim.results.expected_plan_cost)}</td></tr>
+        </tbody></table></div>
+        <p className="mt-3 text-sm font-semibold">Change in expected plan cost: <span className={sim.results.expected_plan_cost>previousSim.results.expected_plan_cost?'text-amber-800':'text-brand'}>{sim.results.expected_plan_cost>=previousSim.results.expected_plan_cost?'+':'−'}{money(Math.abs(sim.results.expected_plan_cost-previousSim.results.expected_plan_cost))}</span></p>
+        <p className="mt-1 text-xs text-muted">Monte Carlo estimates depend on assumptions and sampling; differences are not realised savings or causal effects.</p>
+       </>:<p className="mt-3 text-xs text-muted">Change an assumption and run the comparison again to see side-by-side inputs and outcomes.</p>}
+       <div className="mt-4 space-y-3" role="img" aria-label="Expected modelled costs relative to the illustrative baseline">
+        {[...(previousSim?[{name:'Previous',cost:previousSim.results.expected_plan_cost}]:[]),{name:'Latest',cost:sim.results.expected_plan_cost},{name:'Baseline',cost:sim.baseline_cost}].map(row=><div key={row.name} className="grid grid-cols-[64px_1fr_72px] items-center gap-2 text-xs"><span className="text-muted">{row.name}</span><div className="h-2.5 overflow-hidden rounded-full bg-canvas"><div className={`h-full rounded-full ${row.name==='Baseline'?'bg-slate-400':'bg-teal-600'}`} style={{width:`${Math.max(0,Math.min(100,100*row.cost/Math.max(sim.baseline_cost,sim.results.expected_plan_cost,previousSim?.results.expected_plan_cost??0,1)))}%`}}/></div><span className="text-right font-semibold tabular-nums">{money(row.cost)}</span></div>)}
+       </div>
+      </div>
       <div className="mt-5 rounded-xl border border-line p-4"><h3 className="text-sm font-semibold">Simulated cost range (10th–90th percentile)</h3><div className="mt-3 flex justify-between text-sm font-semibold"><span>{money(sim.results.plan_cost_p10)}</span><span>{money(sim.results.plan_cost_p90)}</span></div><p className="mt-2 text-xs text-muted">10th and 90th percentile modelled costs across the selected simulation trials.</p><p className="mt-3 text-xs text-muted">Expected improvement range: {money(sim.results.improvement_p10)} to {money(sim.results.improvement_p90)}. Distribution is assumption-driven; this is not a statistical confidence interval for realised savings.</p></div>
      </>}
    </>}
