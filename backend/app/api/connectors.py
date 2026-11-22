@@ -2,11 +2,16 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.api.enterprise import DB, Principal, access, audit
 from app.models.connectors import ConnectorRegistration
 from app.services.connector_catalogue import ConnectorRequest, catalogue, validate_pair
+from app.services.readonly_postgres import (
+    ConnectorExecutionError, ConnectorUnavailable, check_connection,
+    preview_table, provisioned_profile,
+)
 
 router = APIRouter(prefix='/api/v1/enterprise', tags=['enterprise-connectors'])
 
@@ -121,3 +126,55 @@ def delete_connector(org_id: int, connector_id: int, auth: Principal, db: DB):
     db.delete(reg)
     audit(db, user.id, org_id, 'connector.deleted', 'connector', connector_id)
     db.commit()
+
+
+class PreviewRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    table: str = Field(min_length=3, max_length=127)
+
+
+def execution_profile(db: DB, user, org_id: int, connector_id: int):
+    access(db, user, org_id, 'admin')
+    reg = get_connector(db, org_id, connector_id)
+    if reg.provider != 'postgresql' or reg.status != 'metadata_approved':
+        raise HTTPException(409, detail='Connector requires approved PostgreSQL metadata')
+    if reg.data_classification not in ('public', 'internal'):
+        raise HTTPException(403, detail='Only synthetic public/internal sources are permitted')
+    profile = provisioned_profile(org_id, connector_id)
+    if profile is None:
+        raise HTTPException(503, detail='Read-only connector not provisioned by operator')
+    return reg, profile
+
+
+@router.post('/organisations/{org_id}/connectors/{connector_id}/connection-check')
+def connection_check(org_id: int, connector_id: int, auth: Principal, db: DB):
+    user, _ = auth
+    reg, profile = execution_profile(db, user, org_id, connector_id)
+    try:
+        result = check_connection(profile)
+    except ConnectorExecutionError:
+        audit(db, user.id, org_id, 'connector.connection_check_failed', 'connector', reg.id)
+        db.commit()
+        raise HTTPException(502, detail='Read-only connection check failed')
+    audit(db, user.id, org_id, 'connector.connection_checked', 'connector', reg.id)
+    db.commit()
+    return result
+
+
+@router.post('/organisations/{org_id}/connectors/{connector_id}/table-preview')
+def table_preview(org_id: int, connector_id: int, payload: PreviewRequest, auth: Principal, db: DB):
+    user, _ = auth
+    reg, profile = execution_profile(db, user, org_id, connector_id)
+    if payload.table not in profile.tables:
+        raise HTTPException(422, detail='Table not in operator allowlist')
+    try:
+        result = preview_table(profile, payload.table)
+    except ConnectorUnavailable:
+        raise HTTPException(422, detail='Table is not eligible for preview')
+    except ConnectorExecutionError:
+        audit(db, user.id, org_id, 'connector.preview_failed', 'connector', reg.id)
+        db.commit()
+        raise HTTPException(502, detail='Read-only preview failed')
+    audit(db, user.id, org_id, 'connector.table_previewed', 'connector', reg.id)
+    db.commit()
+    return result
