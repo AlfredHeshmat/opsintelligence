@@ -17,6 +17,7 @@ from app.security.passwords import hash_password, verify_password
 @pytest.fixture
 def fixture_client(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://test:test@localhost/test')
+    monkeypatch.setenv('OPS_ALLOW_LEGACY_MEMBER_ADD', 'true')
     get_settings.cache_clear()
     engine = create_engine('sqlite+pysqlite:///:memory:', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)

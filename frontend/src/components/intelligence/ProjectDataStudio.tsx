@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { ProjectOptimisation } from './ProjectOptimisation'
 
 export type Project = {id:number;name:string;industry_id:string;organisation_id:number}
 type Dataset = {id:number;row_count:number;source_filename:string;sha256:string;imported_at:string}
@@ -64,6 +65,6 @@ export function ProjectDataStudio({project,token,canEdit,onImported}:{project:Pr
    <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[740px] text-left text-xs"><thead><tr className="border-b border-line text-muted">{['Order','Date','Warehouse','SKU','Units','Status','Promised','Region'].map(h=><th key={h} className="px-3 py-3 font-semibold">{h}</th>)}</tr></thead><tbody>{page?.items.map(o=><tr key={o.order_id} className="border-b border-line/70 hover:bg-canvas"><td className="px-3 py-3 font-medium">{o.order_id}</td><td className="px-3 py-3">{o.order_date}</td><td className="px-3 py-3">{o.warehouse_id}</td><td className="px-3 py-3">{o.sku}</td><td className="px-3 py-3">{o.quantity}</td><td className="px-3 py-3 capitalize">{o.status}</td><td className="px-3 py-3">{o.promised_date}</td><td className="px-3 py-3">{o.destination_region}</td></tr>)}</tbody></table></div>
    {!page?.items.length&&<p className="mt-4 text-sm text-muted">No orders to display.</p>}<div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted"><span>Showing {page?.total?offset+1:0}–{Math.min(offset+25,page?.total??0)} of {page?.total??0} orders</span><div className="flex gap-2"><button type="button" disabled={offset===0} onClick={()=>setOffset(Math.max(0,offset-25))} className="rounded-lg border border-line px-3 py-2 disabled:opacity-40">Previous</button><button type="button" disabled={offset+25>=(page?.total??0)} onClick={()=>setOffset(offset+25)} className="rounded-lg border border-line px-3 py-2 disabled:opacity-40">Next</button></div></div>
   </section>
-  <section id="enterprise-decisions" className="scroll-mt-24 rounded-2xl border border-line bg-white p-6"><h2 className="text-xl font-bold">Project optimisation</h2><p className="mt-2 text-sm text-muted">Not yet connected to imported project records. The public demo solver has separate hypothetical inputs. A project-specific objective, constraints and verified adapter must be implemented before running company optimisation. No savings or optimal solution are claimed for this dataset.</p></section>
+  <ProjectOptimisation project={project} token={token} canRun={canEdit} datasetHash={summary?.dataset?.sha256??null} />
  </div>
 }

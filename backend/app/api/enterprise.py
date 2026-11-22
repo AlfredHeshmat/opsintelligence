@@ -229,6 +229,8 @@ def members(org_id: int, auth: Principal, db: DB):
 def add_member(org_id: int, payload: MemberRequest, auth: Principal, db: DB):
     user, _ = auth
     actor_membership = access(db, user, org_id, 'admin')
+    if not get_settings().ops_allow_legacy_member_add:
+        raise HTTPException(403, 'Direct member assignment is disabled; issue an invitation instead')
     if payload.role == 'admin' and actor_membership.role != 'owner':
         raise HTTPException(403, 'Only organisation owners may grant administrator permissions')
     target = db.scalar(select(User).where(User.email == payload.email.strip().lower()))

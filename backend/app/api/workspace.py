@@ -81,7 +81,11 @@ def solver_capabilities():
     return {"registry_version": REGISTRY_VERSION,
             "adapters": [{"id": "warehouse_milp_v1", "industry": "logistics",
                           "scope": "Synthetic warehouse order allocation only",
-                          "status": "demonstration", "verified_for_company_data": False}],
+                          "status": "demonstration", "verified_for_company_data": False},
+                         {"id": "project-dispatch-knapsack-v1", "industry": "logistics",
+                          "scope": "Authenticated bounded CSV project dispatch/defer planning",
+                          "status": "project_pilot", "verified_for_company_data": False,
+                          "validated_for_synthetic_project_csv": True}],
             "auto_execute": False,
             "requires_explicit_industry_selection": True,
             "requires_validated_data_and_permissions": True}
