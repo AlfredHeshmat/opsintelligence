@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "OpsIntelligence"
     database_url: SecretStr
     cors_origins: list[str] = ["http://localhost:5173"]
+    ops_enable_local_signup: bool = False
 
 
 @lru_cache

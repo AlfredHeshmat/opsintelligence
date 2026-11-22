@@ -4,6 +4,7 @@ NOT A PRODUCTION IDENTITY PROVIDER. Only synthetic demo data is public elsewhere
 """
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
+import re
 import secrets
 from typing import Annotated, Literal
 
@@ -11,11 +12,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.operations import get_db
 from app.models.identity import Membership, Organisation, OrganisationProject, SecurityAudit, SessionToken, User
-from app.security.passwords import verify_password
+from app.security.passwords import hash_password, verify_password
+from app.core.config import get_settings
 from app.services.industry_registry import get_industry
 
 router = APIRouter(prefix='/api/v1/enterprise', tags=['enterprise-security'])
@@ -65,6 +68,43 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class CompanyRegistration(BaseModel):
+    organisation_name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=254)
+    password: str = Field(min_length=12, max_length=256)
+
+
+@router.post('/auth/register-company', status_code=201)
+def register_company(payload: CompanyRegistration, db: DB):
+    """LOCAL DEMO ONLY: creates a new organisation and its first owner atomically.
+
+    Disable this endpoint for internet-facing deployments until verification,
+    abuse controls, and onboarding approval are implemented.
+    """
+    if not get_settings().ops_enable_local_signup:
+        raise HTTPException(403, 'Self-service registration is disabled')
+    email = payload.email.strip().lower()
+    name = payload.organisation_name.strip()
+    if len(name) < 2 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+', email):
+        raise HTTPException(422, 'Valid organisation name and email are required')
+    if db.scalar(select(User.id).where(User.email == email)) is not None:
+        raise HTTPException(409, 'Account already exists; sign in or ask an administrator')
+    # Hash outside the transaction: the DB never stores plaintext passwords.
+    hashed = hash_password(payload.password)
+    user = User(email=email, password_hash=hashed, failed_logins=0)
+    org = Organisation(name=name)
+    try:
+        db.add_all([user, org])
+        db.flush()
+        db.add(Membership(user_id=user.id, organisation_id=org.id, role='owner'))
+        audit(db, user.id, org.id, 'organisation.registered', 'organisation', org.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Registration could not be completed') from None
+    return {'message': 'Company account created. Sign in to continue.', 'organisation_id': org.id}
+
+
 class ProjectRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     industry_id: str = Field(min_length=2, max_length=70)
@@ -72,6 +112,10 @@ class ProjectRequest(BaseModel):
 
 class MemberRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
+    role: Literal['viewer', 'analyst', 'admin']
+
+
+class MemberRoleChange(BaseModel):
     role: Literal['viewer', 'analyst', 'admin']
 
 
@@ -122,6 +166,34 @@ def logout(auth: Principal, db: DB):
     db.commit()
 
 
+@router.get('/auth/sessions')
+def my_sessions(auth: Principal, db: DB):
+    """Expose only session metadata, never bearer tokens or token digests."""
+    user, current = auth
+    sessions = db.scalars(select(SessionToken).where(
+        SessionToken.user_id == user.id,
+        SessionToken.revoked_at.is_(None),
+        SessionToken.expires_at > now(),
+    ).order_by(SessionToken.id.desc())).all()
+    return [{'id': s.id, 'current': s.id == current.id,
+             'created_at': s.created_at.isoformat(),
+             'expires_at': s.expires_at.isoformat()} for s in sessions]
+
+
+@router.post('/auth/logout-all', status_code=204)
+def logout_all(auth: Principal, db: DB):
+    """Revoke every session for this identity, including the calling session."""
+    user, _ = auth
+    active_sessions = db.scalars(select(SessionToken).where(
+        SessionToken.user_id == user.id, SessionToken.revoked_at.is_(None)
+    )).all()
+    timestamp = now()
+    for session in active_sessions:
+        session.revoked_at = timestamp
+    audit(db, user.id, None, 'auth.logout_all', 'session')
+    db.commit()
+
+
 @router.get('/organisations/{org_id}/projects')
 def projects(org_id: int, auth: Principal, db: DB):
     user, _ = auth
@@ -155,7 +227,9 @@ def members(org_id: int, auth: Principal, db: DB):
 @router.post('/organisations/{org_id}/members', status_code=201)
 def add_member(org_id: int, payload: MemberRequest, auth: Principal, db: DB):
     user, _ = auth
-    access(db, user, org_id, 'admin')
+    actor_membership = access(db, user, org_id, 'admin')
+    if payload.role == 'admin' and actor_membership.role != 'owner':
+        raise HTTPException(403, 'Only organisation owners may grant administrator permissions')
     target = db.scalar(select(User).where(User.email == payload.email.strip().lower()))
     if target is None:
         raise HTTPException(404, 'Existing user not found; create accounts using the local CLI')
@@ -166,6 +240,48 @@ def add_member(org_id: int, payload: MemberRequest, auth: Principal, db: DB):
     audit(db, user.id, org_id, 'member.added', 'user', target.id)
     db.commit()
     return {'user_id': target.id, 'role': m.role}
+
+
+def _managed_membership(db: Session, actor: User, org_id: int, target_id: int) -> Membership:
+    """Enforce tenant boundary and privilege separation, including on direct API calls."""
+    actor_membership = access(db, actor, org_id, 'admin')
+    target = db.scalar(select(Membership).where(
+        Membership.organisation_id == org_id,
+        Membership.user_id == target_id,
+    ).with_for_update())
+    if target is None:
+        raise HTTPException(404, 'Organisation member not found')
+    if target.user_id == actor.id:
+        raise HTTPException(403, 'You cannot change or remove your own membership')
+    if target.role == 'owner':
+        raise HTTPException(403, 'Owner membership cannot be changed here')
+    if target.role == 'admin' and actor_membership.role != 'owner':
+        raise HTTPException(403, 'Only owners can manage administrators')
+    return target
+
+
+@router.patch('/organisations/{org_id}/members/{member_user_id}')
+def change_member_role(org_id: int, member_user_id: int, payload: MemberRoleChange,
+                       auth: Principal, db: DB):
+    user, _ = auth
+    target = _managed_membership(db, user, org_id, member_user_id)
+    if payload.role == 'admin' and access(db, user, org_id).role != 'owner':
+        raise HTTPException(403, 'Only owners may grant administrator permissions')
+    if target.role == payload.role:
+        raise HTTPException(409, 'Member already has this role')
+    target.role = payload.role
+    audit(db, user.id, org_id, 'member.role_changed', 'user', target.user_id)
+    db.commit()
+    return {'user_id': target.user_id, 'role': target.role}
+
+
+@router.delete('/organisations/{org_id}/members/{member_user_id}', status_code=204)
+def remove_member(org_id: int, member_user_id: int, auth: Principal, db: DB):
+    user, _ = auth
+    target = _managed_membership(db, user, org_id, member_user_id)
+    db.delete(target)
+    audit(db, user.id, org_id, 'member.removed', 'user', member_user_id)
+    db.commit()
 
 
 @router.get('/organisations/{org_id}/audit')

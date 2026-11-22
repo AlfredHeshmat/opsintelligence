@@ -10,7 +10,7 @@ it('offers a no-login demo choice and explicit enterprise sign-in', async()=>{
  expect(screen.getByRole('heading',{name:/choose how to continue/i})).toBeInTheDocument()
  await user.click(screen.getByRole('button',{name:/enter demo workspace/i}))
  expect(onChoose).toHaveBeenCalledWith('demo')
- await user.click(screen.getByRole('button',{name:/continue to secure sign in/i}))
+ await user.click(screen.getByRole('button',{name:/sign in or create account/i}))
  expect(onChoose).toHaveBeenCalledWith('enterprise')
 })
 

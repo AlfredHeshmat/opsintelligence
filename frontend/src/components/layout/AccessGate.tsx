@@ -31,8 +31,8 @@ export function AccessGate({ onChoose }: { onChoose: (mode: AccessMode) => void 
       </div>
       <div className="rounded-2xl border border-line bg-white p-5">
        <div className="flex items-center gap-3"><span aria-hidden="true" className="grid size-10 place-items-center rounded-lg bg-canvas text-xl text-ink">▣</span><div><h3 className="font-bold">Enterprise sign in</h3><p className="text-xs text-muted">Individual account · Role-based access</p></div></div>
-       <p className="mt-3 text-sm leading-6 text-muted">Use an existing locally provisioned account to manage organisation projects, membership and connector approvals.</p>
-       <button type="button" onClick={()=>onChoose('enterprise')} className="mt-4 w-full rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink transition-colors hover:bg-canvas">Continue to secure sign in <span aria-hidden="true">→</span></button>
+       <p className="mt-3 text-sm leading-6 text-muted">Sign in to your organisation, or create a new company account in local prototype mode.</p>
+       <button type="button" onClick={()=>onChoose('enterprise')} className="mt-4 w-full rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink transition-colors hover:bg-canvas">Sign in or create account <span aria-hidden="true">→</span></button>
       </div>
      </div>
      <button type="button" aria-expanded={showDetails} onClick={()=>setShowDetails(v=>!v)} className="mt-5 text-left text-xs font-semibold text-brand underline underline-offset-4">{showDetails?'Hide':'What does each mode allow?'}</button>
