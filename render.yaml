@@ -1,0 +1,25 @@
+# Optional Render Blueprint for public synthetic demo only.
+# Read docs/public-zero-cost-deployment.md before creating the service.
+services:
+  - type: web
+    name: opsintelligence-public-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile.public
+    dockerContext: ./backend
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: OPS_PUBLIC_DEMO_ONLY
+        value: "true"
+      - key: OPS_ENABLE_LOCAL_SIGNUP
+        value: "false"
+      - key: OPS_ALLOW_LEGACY_MEMBER_ADD
+        value: "false"
+      - key: OPS_READONLY_CONNECTORS_ENABLED
+        value: "false"
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

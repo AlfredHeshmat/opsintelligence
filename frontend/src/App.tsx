@@ -17,6 +17,7 @@ type Run = {id:number; status:string; objective_value:number|null; baseline_cost
 import type { OrderRecord } from './components/intelligence/ordersUtils'
 type Order = OrderRecord
 const API=(import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000').replace(/\/$/,'')
+const PUBLIC_DEMO_ONLY=import.meta.env.VITE_PUBLIC_DEMO_ONLY==='true'
 async function request<T>(path:string, init?:RequestInit):Promise<T>{const response=await fetch(`${API}/api/v1${path}`,init);if(!response.ok){let message=`Request failed (${response.status})`;try{const body=await response.json() as {detail?:string};if(body.detail) message=body.detail}catch{/* ignore */}throw new Error(message)}return response.json() as Promise<T>}
 const money=(n:number|null)=>n===null?'—':new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD',maximumFractionDigits:0}).format(n)
 const pageGuidance:Record<string,string>={workspace:'Start with operational KPIs, then navigate to analytics, optimisation or scenarios.',intelligence:'Filter demand and product performance. Export the displayed synthetic results for further analysis.',orders:'Inspect source orders behind the summary KPIs. Records are generated locally.',optimization:'Define resource constraints, solve, and inspect model status before comparing scenarios.', 'industry-pilots':'Select a supported industry, review its explicit choices and constraints, then solve.', 'decision-workspace':'Describe a business scenario and validate its data contract before running an applicable solver.',connections:'Review available data sources and safe, local-only preparation steps.',predictions:'Check holdout evaluation before interpreting delay-risk estimates. Weak models are clearly flagged.',simulation:'Solve a warehouse allocation first; then compare simulation assumptions and outputs.',connection:'Check API availability and database readiness.'}
@@ -24,7 +25,7 @@ export default function App(){
  const [mode,setMode]=useState<'demo'|'enterprise'|null>(null)
  const [activePage,setActivePage]=useState(()=>window.location.hash.slice(1)||'workspace')
  useEffect(()=>{const update=()=>{setActivePage(window.location.hash.slice(1)||'workspace');window.scrollTo({top:0,behavior:'instant'})};window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update)},[])
- function chooseMode(selected:'demo'|'enterprise'){setMode(selected);window.location.hash=selected==='demo'?'workspace':'enterprise-workspace';window.scrollTo(0,0)}
+ function chooseMode(selected:'demo'|'enterprise'){if(PUBLIC_DEMO_ONLY && selected==='enterprise')return;setMode(selected);window.location.hash=selected==='demo'?'workspace':'enterprise-workspace';window.scrollTo(0,0)}
  function exitMode(){setMode(null);window.history.replaceState(null,'',window.location.pathname+window.location.search);setActivePage('workspace');window.scrollTo(0,0)}
  const [overview,setOverview]=useState<Overview|null>(null)
  const [orders,setOrders]=useState<Order[]>([])
@@ -48,7 +49,7 @@ export default function App(){
  },[mode])
  async function seed(){setBusy(true);setError('');try{await request('/data/seed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count:240,seed:42})});await refresh();setRefreshKey(k=>k+1)}catch(e){setError(e instanceof Error?e.message:'Seed failed')}finally{setBusy(false)}}
  async function solve(){setBusy(true);setError('');try{const config={handling_capacity:handling===''?null:Number(handling),labour_hours:labour===''?null:Number(labour)};setRun(await request<Run>('/optimization/solve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}))}catch(e){setError(e instanceof Error?e.message:'Optimisation failed')}finally{setBusy(false)}}
- if(mode===null)return <AccessGate onChoose={chooseMode}/>
+ if(mode===null)return <AccessGate onChoose={chooseMode} publicDemoOnly={PUBLIC_DEMO_ONLY}/>
  if(mode==='enterprise')return <AppShell mode="enterprise" onExit={exitMode}><OrganisationWorkspace onExit={exitMode}/></AppShell>
  return <AppShell mode="demo" onExit={exitMode}>
   <section aria-label="Workspace guidance" className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-line bg-white px-5 py-4 shadow-panel"><div><p className="text-xs font-bold uppercase tracking-widest text-brand">{activePage==='workspace'?'Your starting point':'Workspace guide'}</p><p className="mt-1 text-sm text-muted">{pageGuidance[activePage]??'Explore this synthetic workspace. Source data and solver assumptions are labelled throughout.'}</p></div><span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">Public synthetic demo</span></section>

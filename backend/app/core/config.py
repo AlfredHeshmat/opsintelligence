@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     ops_enable_local_signup: bool = False
     ops_allow_legacy_member_add: bool = False
+    ops_public_demo_only: bool = False
 
 
 @lru_cache

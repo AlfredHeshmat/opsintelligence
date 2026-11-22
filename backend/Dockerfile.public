@@ -1,0 +1,13 @@
+# A dedicated public-demo image, intentionally not the enterprise Docker runtime.
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+COPY pyproject.toml ./
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY scripts ./scripts
+RUN pip install --no-cache-dir . && groupadd -r ops && useradd -r -g ops -d /app ops && chown -R ops:ops /app
+USER ops
+EXPOSE 10000
+CMD ["python", "-m", "scripts.public_entrypoint"]
