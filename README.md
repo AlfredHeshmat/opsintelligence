@@ -1,106 +1,135 @@
 # OpsIntelligence
 
-**Operational analytics and constraint-aware decision optimisation.** A reproducible, zero-subscription, local-first full-stack portfolio application built with React/TypeScript, FastAPI, PostgreSQL and open-source mathematical optimisation tools.
+**Operational intelligence, mathematical optimisation and scenario analysis — from operational data to explainable decisions.**
 
-> **Release scope:** Portfolio/local prototype using synthetic and hypothetical data. Mathematical optimality means **optimal for the stated mathematical formulation**, not optimal across every real-world business constraint. Enterprise identity, public registration and connector features are **not certified for confidential data or public internet exposure**. There is currently **no public hosted URL**.
+[**Launch live demo**](https://opsintelligence.pages.dev) · [Architecture](docs/architecture.md) · [Recruiter walkthrough](docs/recruiter-demo.md) · [Deployment and security verification](docs/public-deployment-verification.md)
 
-## What you can do
+OpsIntelligence is a full-stack software engineering portfolio project for exploring warehouse operations, testing constrained decisions and comparing hypothetical scenarios. It combines an interactive React/TypeScript interface, a Python/FastAPI API, PostgreSQL data models, mixed-integer linear programming (MILP), machine-learning evaluation and Monte Carlo simulation.
 
-| Experience | Capabilities | Source and limits |
+**Public demo:** Free-hosted, no account required, synthetic data only. **Local enterprise prototype:** Separate authenticated company/project workflows that are **not deployed publicly**. The two experiences intentionally have different security and feature scopes.
+
+> **Engineering contract:** Solver optimality applies only to the stated mathematical formulation and assumptions. Scenario differences are *modelled*, not audited or realised cost savings. Industry examples are bounded prototypes, not production-scale solvers. The project is not certified for confidential enterprise data.
+
+## Try it online
+
+**[https://opsintelligence.pages.dev](https://opsintelligence.pages.dev)**
+
+A suggested five-minute walkthrough:
+
+1. **Overview:** Inspect order volume, pending workload, inventory and delivery KPIs generated from synthetic warehouse records.
+2. **Business intelligence / Operational orders:** Explore trends, filters, order details and operational signals.
+3. **Optimisation:** Modify handling constraints and examine the solver's proposed allocation, objective and assumptions.
+4. **Industry solver lab:** Compare bounded optimisation examples across logistics, agriculture and technology.
+5. **Scenario analysis / Delay predictions:** Examine sensitivity, uncertainty and evaluation metrics rather than treating forecasts as guarantees.
+
+The demonstrated baseline dataset contains **240 synthetic orders**, including 68 pending orders, 172 delivered orders, 31 recorded late deliveries and an **81.98% on-time rate**. These are *demo data*, not results achieved for a customer. They may change if the synthetic dataset is updated.
+
+> Free-tier hosting can cause a slow first API request after inactivity. This is a hosting constraint, not an indication that results were precomputed or a guarantee of uptime.
+
+## Capabilities and boundaries
+
+| Area | Implemented capability | What it does **not** imply |
 | --- | --- | --- |
-| **Explore Demo** — no login | Warehouse overview, order exploration, synthetic alerts, delay-model evaluation, MILP warehouse allocation, Monte Carlo scenario comparison, supported industry solver examples | Generated warehouse data and hypothetical model coefficients; not real business outcomes |
-| **Enterprise workspace** — local authenticated prototype | Company onboarding, organisations, individual accounts, invitations, role-based access, projects, audit records, connector governance | Local-only demonstration; do not use real company credentials |
-| **Private project data** | Validate and import a bounded Logistics CSV, persist project-scoped PostgreSQL records, view KPIs, filter and paginate orders | Up to 2 MB / 2,000 rows and the documented 13-column Logistics format; project/organisation authorization at the API |
-| **Project optimisation** | Set handling capacity and assumed defer penalty, solve dispatch/defer MILP, store modelled decisions, provenance and run history | Pending orders only, at most 150 per run; no live routing, inventory or labour feasibility guarantee |
+| Operational analytics | Warehouse KPIs, time trends, order explorer, synthetic alert signals | Live production warehouse integration |
+| Warehouse optimisation | Constraint-based dispatch/allocation models with SciPy/HiGHS and explicit objective assumptions | Real-world optimality across every physical constraint |
+| Industry solver pilots | Small MILP examples for logistics, agriculture and technology | Production-grade multi-industry optimisation engines |
+| ML and simulations | Delay-prediction evaluation and Monte Carlo/what-if comparisons | Validated forecasting or guaranteed financial outcomes |
+| Enterprise workspace (local only) | Organisations, projects, roles, invitation onboarding, audit records and bounded CSV import | Public production-ready identity or tenant-security certification |
+| Engineering and delivery | REST APIs, validation, SQLAlchemy, Alembic, Docker, CI and automated tests | A formal external security or performance audit |
 
-The project is architected for later industry adapters, data connectors, advanced optimisation and integrations. They are not implied to be implemented where they are not.
+## System architecture
 
-## Run locally (Docker)
-
-**Requirements:** Docker with Compose, Git and a shell. No external paid API or service is needed.
-
-```powershell
-# In the repository root
-Copy-Item .env.example .env   # Only if .env does not already exist
-# Edit .env, setting a strong, unique local POSTGRES_PASSWORD.
-docker compose -f compose.full.yaml up -d --build
-docker compose -f compose.full.yaml ps -a
-Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
-Invoke-RestMethod http://127.0.0.1:8080/api/v1/ready
+```mermaid
+flowchart TB
+    Visitor["Recruiter / browser"] -->|"HTTPS static assets"| Pages["Cloudflare Pages<br/>React + TypeScript + Vite"]
+    Pages -->|"HTTPS REST / CORS"| API["Render Free web service<br/>FastAPI + Python"]
+    API --> Analytics["Operational analytics<br/>SQLAlchemy queries"]
+    API --> Models["Decision services<br/>SciPy / HiGHS MILP<br/>scikit-learn + Monte Carlo"]
+    Analytics -->|"TLS / psycopg"| Neon[("Neon PostgreSQL<br/>synthetic demo dataset")]
+    Models -->|"bounded inputs / outputs"| API
+    API -. "Public-only configuration: enterprise routers omitted" .-> Boundary["No public enterprise signup,<br/>company authentication or project-data APIs"]
 ```
 
-Open **http://127.0.0.1:8080**. The database and backend should be `healthy`, frontend `Up`, and the one-time migration task `Exited (0)`.
+**Two deployment profiles:**
 
-**Preserve your data:** The named PostgreSQL volume is persistent. Never run `docker compose down -v` unless you explicitly intend to destroy the local database. `.env`, database credentials and any session/invitation tokens must not be committed. Demo signup is enabled by the local Compose configuration; turn it off for anything internet-facing.
+- **Public recruiter demo:** Cloudflare Pages frontend, Render FastAPI Docker container and dedicated Neon PostgreSQL. `VITE_PUBLIC_DEMO_ONLY=true`, `OPS_PUBLIC_DEMO_ONLY=true` and server-side route restrictions separate the public experience from local enterprise workflows. The public API rejects enterprise authentication requests and public demo reseeding. CORS is restricted to the Pages origin.
+- **Local enterprise prototype:** Docker Compose / PostgreSQL with the full React/FastAPI application, company/project workflows, scoped CSV data, invitations, role-based authorisation and saved project optimisation runs. This environment is for demonstration and local testing, **not** public exposure or real client credentials.
 
-For development without the full stack, consult [development plan](docs/development-plan.md) and the [architecture notes](docs/architecture.md).
+See [architecture and trust boundaries](docs/architecture.md) for component responsibilities, data flow, API security limitations, delivery automation and trade-offs.
 
-## Guided walkthrough for recruiters
+## Technical stack
 
-1. Open the app and choose **Explore interactive demo**; no account required.
-2. At **Overview**, inspect synthetic KPIs and the interactive trend explorer.
-3. At **Operational orders**, filter, sort and export the bounded synthetic preview.
-4. At **Optimisation**, choose handling/labour assumptions and examine the certified solver result (when optimal).
-5. At **What-if simulator**, compare two scenario settings and read the uncertainty limits.
-6. At **Industry solver lab**, review examples for logistics, agriculture and technology.
-7. Read [Recruiter demonstration guide](docs/recruiter-demo.md) for the enterprise prototype and mathematical limitations.
+| Layer | Technologies |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, responsive component UI |
+| Backend | Python, FastAPI, Pydantic, REST APIs |
+| Data | PostgreSQL 16, SQLAlchemy, psycopg, Alembic |
+| Decision intelligence | SciPy / HiGHS MILP, scikit-learn, Monte Carlo simulations |
+| Local infrastructure | Docker, Docker Compose, Nginx reverse proxy |
+| Public hosting | Cloudflare Pages, Render Free, Neon Free |
+| Quality / delivery | pytest, Vitest, ESLint, TypeScript compilation, GitHub Actions |
 
-The hosted recruiter experience should use **only synthetic data**. Do not publish developer test accounts, invitation codes or an unrestricted company registration flow.
+## Testing and verification
 
-## Architecture
+Latest locally reported checks at deployment preparation:
 
-```text
-React / TypeScript / Vite  ── Nginx reverse proxy ──┐
-                                                    │
-                                                 FastAPI
-                                               /    |     \
-                           Auth + tenancy + audit  |   Solver services
-                                            SQLAlchemy   SciPy / HiGHS
-                                               |           |
-                                               └ PostgreSQL┘
-                                               (Docker volume)
-```
+- **Backend:** 64 tests passed.
+- **Frontend:** 21 tests passed; lint and production build passed.
+- **CI:** GitHub Actions checks passed for the public deployment PR.
+- **Public smoke checks:** Render and Cloudflare successfully deployed; public operational overview and industry catalogue returned JSON; company authentication URL returned the public-demo restriction; the frontend displayed API-backed synthetic KPIs.
 
-- `frontend/src/components/layout`: access selection, sidebar, responsive navigation and workflow guidance.
-- `frontend/src/components/intelligence`: analytics, projects, connectors, scenarios and optimisation UIs.
-- `backend/app/api`: authenticated and demo HTTP endpoints.
-- `backend/app/services`: validation, data adapters, decision models and integration services.
-- `backend/alembic`: database schema migrations.
-- `.github/workflows/ci.yml`: backend tests, frontend build/lint/tests, migrations and Docker smoke tests.
-
-## Quality checks
+These checks are meaningful but **not** external penetration testing, exhaustive solver benchmarking or continuous uptime monitoring.
 
 ```powershell
+# Frontend validation
 cd frontend
 npm ci
 npm run lint
 npm run build
 npm test
+
+# Backend (from repository root, with a local Python venv installed)
 cd ..\backend
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-For a clean Python environment, install `backend[dev]` following the backend's requirements. CI is authoritative for repeatable Linux checks; local browser/role tests are complementary. An existing Starlette/httpx deprecation warning does not indicate a failing test.
+## Local development
 
-## Security & deployment boundaries
+**Prerequisites:** Docker Compose, Python and Node.js/npm for development, or Docker for the full-stack local build. No paid APIs are required.
 
-**This is not production-certified enterprise software.** Project membership checks and test coverage are useful protections, but are not independent tenant-security certification. Specifically, email verification, MFA, robust reset/recovery, external threat testing, public-abuse controls and extensive per-project rights remain out of scope. Browser UI hiding is never authorization; the backend enforces access. Existing admin/enterprise workflows must remain closed to unauthenticated public visitors.
+```powershell
+# Repository root
+Copy-Item .env.example .env # only if .env doesn't already exist
+# Set a unique local POSTGRES_PASSWORD in .env
+docker compose -f compose.full.yaml up -d --build
+docker compose -f compose.full.yaml ps -a
+```
 
-For zero-cost deployment strategy, staging gates and exact restrictions, read [Release and free hosting guide](docs/phase4f-release-guide.md). Free service availability, quotas and acceptable-use restrictions must be rechecked at deployment time. Public static demo fallback is allowed only with honest labeling; it must not imply live API execution.
+Open **http://127.0.0.1:8080** for the local Docker frontend. Keep local `.env` files, credentials and invitation codes outside version control. **Do not run `docker compose down -v` unless intentionally deleting local PostgreSQL data.**
 
-## Further documentation
+## Data and model integrity
 
-- [Recruiter demo and storytelling](docs/recruiter-demo.md)
-- [Phase 4F release / security checklist](docs/phase4f-release-guide.md)
-- [Project optimisation mathematical contract](docs/phase4e-final-optimisation-and-security.md)
-- [Private CSV workspace](docs/phase4e2-private-csv-workspace.md)
-- [Employee invitations](docs/phase4e3-employee-invitations.md)
-- [Earlier development phases](docs/development-plan.md)
+- All publicly demonstrated order data is synthetic. Linked external data sources in the industry catalogue are *research references*, not proof of live ingestion.
+- The warehouse optimisation objective considers defined capacity and penalty/cost assumptions; it does not fully model routing, labour scheduling or all inventory constraints.
+- A solver result labelled **optimal** means optimal within the encoded model and solver status—not the single globally best decision for any business.
+- Monte Carlo outputs and ML assessments illustrate model behaviour and uncertainty; they are not validated operating forecasts.
+- Do not interpret reductions in hypothetical defer penalties as realised revenue or profit.
 
-**Cost commitment:** No mandatory subscription or paid cloud/API dependencies. Local execution still uses your hardware, electricity and network; a permanent reliable public backend cannot be guaranteed free.
+## Security and cost disclosures
 
-## Public recruiter deployment (synthetic demo only)
+The public API uses a separate deployment configuration and excludes enterprise/authentication, connector and private-project routes. It also blocks demo reseeding and applies a basic per-process computation throttle. These are **defence-in-depth measures, not proof of production security**. Email verification, MFA, independent audit, robust abuse protection and per-project enterprise hardening are outside the demonstrated release scope.
 
-See [`docs/public-zero-cost-deployment.md`](docs/public-zero-cost-deployment.md) for the free-tier Cloudflare Pages + Render + Neon deployment blueprint, public-only backend/frontend configuration, limitations and smoke tests. The release verification checklist is in [`docs/public-deployment-verification.md`](docs/public-deployment-verification.md).
+The project currently uses free-plan hosting with no mandatory paid subscriptions. Free plans have usage limits, cold starts and availability trade-offs; ongoing operation and zero future charges are not guaranteed by the project itself. Do not upgrade hosting to solve a capacity problem without reviewing the cost.
 
-**The public build must hide the enterprise login and omit enterprise routes at the API layer.** Private company data, accounts, invitation codes, and credentials must never be moved to the public demo. No public URL has been deployed or verified by this repository change alone.
+## Documentation
+
+- [System architecture and data flow](docs/architecture.md)
+- [Recruiter demo walkthrough](docs/recruiter-demo.md)
+- [Public release verification](docs/public-deployment-verification.md)
+- [Free-tier deployment guide](docs/public-zero-cost-deployment.md)
+- [Mathematical optimisation contract](docs/phase4e-final-optimisation-and-security.md)
+- [Private project CSV workflow](docs/phase4e2-private-csv-workspace.md)
+- [Employee invitation workflow](docs/phase4e3-employee-invitations.md)
+- [Resume project description](docs/resume-project-entry.md)
+
+**Built as a demonstrable full-stack engineering and decision-intelligence platform—not a claim of universal business optimisation.**
